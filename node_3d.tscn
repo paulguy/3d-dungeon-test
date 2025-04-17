@@ -1,0 +1,58 @@
+[gd_scene load_steps=9 format=3 uid="uid://cwfcgw2p0mu4i"]
+
+[ext_resource type="Script" uid="uid://bjvukp4l2quli" path="res://multi_mesh_instance_3d.gd" id="1_a202f"]
+[ext_resource type="Script" uid="uid://dbuance6pqt3y" path="res://node_3d.gd" id="1_noarx"]
+[ext_resource type="Shader" uid="uid://d1garwujwxrkq" path="res://node_3d.gdshader" id="2_a0tk4"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_noarx"]
+size = Vector2(20, 10)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_a0tk4"]
+render_priority = 0
+shader = ExtResource("2_a0tk4")
+shader_parameter/grid_width = 0
+shader_parameter/grid_depth = 0
+
+[sub_resource type="BoxMesh" id="BoxMesh_a0tk4"]
+material = SubResource("ShaderMaterial_a0tk4")
+
+[sub_resource type="MultiMesh" id="MultiMesh_r3fl7"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("BoxMesh_a0tk4")
+
+[sub_resource type="Environment" id="Environment_a202f"]
+background_mode = 1
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.21
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_noarx")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0, 0, 0)
+keep_aspect = 0
+current = true
+
+[node name="Ground Plane" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -10, 5)
+visible = false
+mesh = SubResource("PlaneMesh_noarx")
+
+[node name="Pillar" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("BoxMesh_a0tk4")
+
+[node name="MultiMeshInstance3D" type="MultiMeshInstance3D" parent="."]
+cast_shadow = 0
+multimesh = SubResource("MultiMesh_r3fl7")
+script = ExtResource("1_a202f")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_a202f")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
+sky_mode = 1
