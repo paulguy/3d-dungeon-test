@@ -10,8 +10,8 @@ size = Vector2(20, 10)
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_a0tk4"]
 render_priority = 0
 shader = ExtResource("2_a0tk4")
-shader_parameter/grid_width = 0
-shader_parameter/grid_depth = 0
+shader_parameter/depth = 0.0
+shader_parameter/count = 0
 
 [sub_resource type="BoxMesh" id="BoxMesh_a0tk4"]
 material = SubResource("ShaderMaterial_a0tk4")
@@ -24,9 +24,7 @@ mesh = SubResource("BoxMesh_a0tk4")
 
 [sub_resource type="Environment" id="Environment_a202f"]
 background_mode = 1
-ambient_light_source = 2
 ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_energy = 0.21
 
 [node name="Node3D" type="Node3D"]
 script = ExtResource("1_noarx")
@@ -55,4 +53,10 @@ environment = SubResource("Environment_a202f")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
+visible = false
 sky_mode = 1
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Sprite2D" type="Sprite2D" parent="CanvasLayer"]
+position = Vector2(604, 38)
