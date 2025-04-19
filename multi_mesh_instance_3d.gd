@@ -1,6 +1,7 @@
 extends MultiMeshInstance3D
 
-var _heights_and_face_offsets : Image
+var _face_heights : Image
+var _face_offsets : Image
 var _face_hues_and_biases : Image
 var _floor_north_south_hues : Image
 var _floor_north_south_biases : Image
@@ -12,7 +13,8 @@ var _ceiling_north_south_biases : Image
 var _ceiling_east_west_hues : Image
 var _ceiling_east_west_biases : Image
 var _ceiling_side_texture_offsets : Image
-var heights_and_face_offsets_tex : ImageTexture
+var face_heights_tex : ImageTexture
+var face_offsets_tex : ImageTexture
 var face_hues_and_biases_tex : ImageTexture
 var floor_north_south_hues_tex : ImageTexture
 var floor_north_south_biases_tex : ImageTexture
@@ -32,8 +34,8 @@ var positions_south : ImageTexture
 var positions_west : ImageTexture
 
 func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
-						 texture : CompressedTexture2D,
-						 heights_and_face_offsets : Image, face_hues_and_biases : Image,
+						 texture : CompressedTexture2D, face_heights : Image,
+						 face_offsets : Image, face_hues_and_biases : Image,
 						 floor_north_south_hues : Image, floor_north_south_biases : Image,
 						 floor_east_west_hues : Image, floor_east_west_biases : Image,
 						 floor_side_texture_offsets : Image,
@@ -74,7 +76,8 @@ func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
 	for i in len(positions):
 		multimesh.set_instance_transform(i, Transform3D(Basis(), Vector3(positions[i].x, 0.0, positions[i].y)))
 		multimesh.set_instance_transform(len(positions) + i, Transform3D(Basis(), Vector3(positions[i].x, 0.0, positions[i].y)))
-	_heights_and_face_offsets = heights_and_face_offsets
+	_face_heights = face_heights
+	_face_offsets = face_offsets
 	_face_hues_and_biases = face_hues_and_biases
 	_floor_north_south_hues = floor_north_south_hues
 	_floor_north_south_biases = floor_north_south_biases
@@ -86,7 +89,8 @@ func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
 	_ceiling_east_west_hues = ceiling_east_west_hues
 	_ceiling_east_west_biases = ceiling_east_west_biases
 	_ceiling_side_texture_offsets = ceiling_side_texture_offsets
-	heights_and_face_offsets_tex = ImageTexture.create_from_image(heights_and_face_offsets)
+	face_heights_tex = ImageTexture.create_from_image(face_heights)
+	face_offsets_tex = ImageTexture.create_from_image(face_offsets)
 	face_hues_and_biases_tex = ImageTexture.create_from_image(face_hues_and_biases)
 	floor_north_south_hues_tex = ImageTexture.create_from_image(floor_north_south_hues)
 	floor_north_south_biases_tex = ImageTexture.create_from_image(floor_north_south_biases)
@@ -98,8 +102,8 @@ func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
 	ceiling_east_west_hues_tex = ImageTexture.create_from_image(ceiling_east_west_hues)
 	ceiling_east_west_biases_tex = ImageTexture.create_from_image(ceiling_east_west_biases)
 	ceiling_side_texture_offsets_tex = ImageTexture.create_from_image(ceiling_side_texture_offsets)
-	_mesh.mesh.material.set_shader_parameter(&'heights_and_face_offsets',
-											heights_and_face_offsets_tex)
+	_mesh.mesh.material.set_shader_parameter(&'face_heights', face_heights_tex)
+	_mesh.mesh.material.set_shader_parameter(&'face_offsets', face_offsets_tex)
 	_mesh.mesh.material.set_shader_parameter(&'face_hues_and_biases',
 											face_hues_and_biases_tex)
 	_mesh.mesh.material.set_shader_parameter(&'face_hues_and_biases',
@@ -125,7 +129,8 @@ func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
 	_mesh.mesh.material.set_shader_parameter(&'ceiling_side_texture_offsets',
 											ceiling_side_texture_offsets_tex)
 
-func refresh(heights_and_face_offsets : Image, face_hues_and_biases : Image,
+func refresh(face_heights : Image, face_offsets : Image,
+			 face_hues_and_biases : Image,
 			 floor_north_south_hues : Image, floor_north_south_biases : Image,
 			 floor_east_west_hues : Image, floor_east_west_biases : Image,
 			 floor_side_texture_offsets : Image,

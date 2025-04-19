@@ -9,7 +9,8 @@ const TEST_WORLD_HEIGHT : int = 128
 
 var pos : Vector2i
 
-var heights_and_face_offsets : Image
+var face_heights : Image
+var face_offsets : Image
 var face_hues_and_biases : Image
 var floor_north_south_hues : Image
 var floor_north_south_biases : Image
@@ -23,7 +24,8 @@ var ceiling_east_west_biases : Image
 var ceiling_side_texture_offsets : Image
 
 func _ready():
-	heights_and_face_offsets = Image.create_empty(TEST_WORLD_WIDTH, TEST_WORLD_HEIGHT, false, Image.FORMAT_RGBAF)
+	face_heights = Image.create_empty(TEST_WORLD_WIDTH, TEST_WORLD_HEIGHT, false, Image.FORMAT_RGBAF)
+	face_offsets = Image.create_empty(TEST_WORLD_WIDTH, TEST_WORLD_HEIGHT, false, Image.FORMAT_RGBAF)
 	face_hues_and_biases = Image.create_empty(TEST_WORLD_WIDTH, TEST_WORLD_HEIGHT, false, Image.FORMAT_RGBAF)
 	floor_north_south_hues = Image.create_empty(TEST_WORLD_WIDTH, TEST_WORLD_HEIGHT, false, Image.FORMAT_RGBAF)
 	floor_north_south_biases = Image.create_empty(TEST_WORLD_WIDTH, TEST_WORLD_HEIGHT, false, Image.FORMAT_RGBAF)
@@ -49,6 +51,7 @@ func _ready():
 	ceiling_east_west_hues.fill(Color(0.3, 0.5, 0.7, 0.9))
 	ceiling_east_west_biases.fill(Color(0.5, 1.5, 0.5, 1.5))
 	ceiling_side_texture_offsets.fill(Color(2.0, 2.0, 2.0, 2.0))
+	face_offsets.fill(Color(0.0, 3.0, 0.0, 0.0))
 
 	for y in TEST_WORLD_WIDTH:
 		for x in TEST_WORLD_HEIGHT:
@@ -57,14 +60,15 @@ func _ready():
 													   0.0,
 													   0.5 / div,
 													   1.0 / div))
-			heights_and_face_offsets.set_pixel(x, y, Color((sin(x / 2.0) * cos(y / 2.0)) / 2.0 - 1.5,
-														   (sin(x / 2.0) + cos(y / 2.0)) / 2.0 + 1.5,
-														   0.0,
-														   3.0))
+			face_heights.set_pixel(x, y, Color(3.0,
+											   (sin(x / 2.0) * cos(y / 2.0)) / 2.0 + 1.5,
+											   (sin(x / 2.0) + cos(y / 2.0)) / 2.0 - 1.5,
+											   -3.0))
 
 	$'MultiMeshInstance3D'.set_view_parameters($'Pillar', $'Camera3D'.fov, VIEW_DEPTH,
 											   load("res://textures.png"),
-											   heights_and_face_offsets,
+											   face_heights,
+											   face_offsets,
 											   face_hues_and_biases,
 											   floor_north_south_hues,
 											   floor_north_south_biases,
@@ -77,7 +81,8 @@ func _ready():
 											   ceiling_east_west_biases,
 											   ceiling_side_texture_offsets)
 	$'MultiMeshInstance3D'.refresh(
-		heights_and_face_offsets,
+		face_heights,
+		face_offsets,
 		face_hues_and_biases,
 		floor_north_south_hues,
 		floor_north_south_biases,

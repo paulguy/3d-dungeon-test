@@ -3,42 +3,41 @@ render_mode unshaded;
 render_mode skip_vertex_transform;
 uniform float max_depth; // max depth of meshes
 uniform int count; // count of meshes
-uniform sampler2D world_positions : filter_nearest;
+uniform sampler2D world_positions;
 uniform vec2 view_pos; // position in map
-uniform sampler2D map_positions : filter_nearest; // Coordinate offsets for looking up data in textures
+uniform sampler2D map_positions; // Coordinate offsets for looking up data in textures
 
 // r = floor height
 // g = ceiling height
 // b = floor texture offset
 // a = ceiling texture_offset
-uniform sampler2D heights_and_face_offsets : filter_nearest;
+uniform sampler2D face_heights;
+uniform sampler2D face_offsets;
 // r = floor hue
 // g = ceiling hue
 // b = floor bias
 // a = ceiling bias
-uniform sampler2D face_hues_and_biases : filter_nearest;
+uniform sampler2D face_hues_and_biases;
 // r - north top
 // g - north bottom
 // b - south top
 // a - south bottom
-uniform sampler2D floor_north_south_hues : filter_nearest;
-uniform sampler2D floor_north_south_biases : filter_nearest;
-uniform sampler2D floor_east_west_hues : filter_nearest;
-uniform sampler2D floor_east_west_biases : filter_nearest;
+uniform sampler2D floor_north_south_hues;
+uniform sampler2D floor_north_south_biases;
+uniform sampler2D floor_east_west_hues;
+uniform sampler2D floor_east_west_biases;
 // r - north
 // g - east
 // b - south
 // a - west
-uniform sampler2D floor_side_texture_offsets : filter_nearest;
-uniform sampler2D ceiling_north_south_hues : filter_nearest;
-uniform sampler2D ceiling_north_south_biases : filter_nearest;
-uniform sampler2D ceiling_east_west_hues : filter_nearest;
-uniform sampler2D ceiling_east_west_biases : filter_nearest;
-uniform sampler2D ceiling_side_texture_offsets : filter_nearest;
+uniform sampler2D floor_side_texture_offsets;
+uniform sampler2D ceiling_north_south_hues;
+uniform sampler2D ceiling_north_south_biases;
+uniform sampler2D ceiling_east_west_hues;
+uniform sampler2D ceiling_east_west_biases;
+uniform sampler2D ceiling_side_texture_offsets;
 uniform sampler2D albedo_texture : filter_nearest;
 /* TODO: block heights
-		 the rest of everything else
-		 textures and mapping stuff for heights
 */
 
 vec3 hue2rgb(float val, float bias) {
@@ -75,6 +74,8 @@ void vertex() {
 	float south_face = -min(0.0, NORMAL.z);
 	float west_face = max(0.0, NORMAL.x);
 	float east_face = -min(0.0, NORMAL.x);
+	float top_face = max(0.0, NORMAL.y);
+	float bottom_face = -min(0.0, NORMAL.y);
 	float top_vert = max(VERTEX.y, 0.0) * 2.0;
 	float bottom_vert = min(VERTEX.y, 0.0) * -2.0;
 
@@ -108,11 +109,13 @@ void vertex() {
 				(1.0 - (world_pos.y / (max_depth + 1.0)));
 
 	ivec2 tex_size = textureSize(albedo_texture, 0);
-	vec4 height_and_face_offset = texelFetch(heights_and_face_offsets, imap_pos, 0);
+	vec4 mesh_face_heights = texelFetch(face_heights, imap_pos, 0);
+	vec4 mesh_face_offsets = texelFetch(face_offsets, imap_pos, 0);
 	vec4 floor_tex_offsets = texelFetch(floor_side_texture_offsets, imap_pos, 0);
 	vec4 ceiling_tex_offsets = texelFetch(ceiling_side_texture_offsets, imap_pos, 0);
 	vec2 uv_scale = vec2(1.0, float(tex_size.y / tex_size.x));
-	UV = (horiz_face * (((VERTEX.zx + 0.5) + vec2(0.0, height_and_face_offset[2 + ceiling_mesh])) / uv_scale)) +
+	UV = (top_face * (((VERTEX.zx + 0.5) + vec2(0.0, mesh_face_offsets.r)) / uv_scale)) +
+		 (bottom_face * (((VERTEX.zx + 0.5) + vec2(0.0, mesh_face_offsets.g)) / uv_scale)) +
 		 ((north_face * ffloor_mesh) * (((vec2(VERTEX.x, -VERTEX.y) + 0.5) + vec2(0.0, floor_tex_offsets.r)) / uv_scale)) +
 		 ((east_face * ffloor_mesh) * (((vec2(VERTEX.z, -VERTEX.y) + 0.5) + vec2(0.0, floor_tex_offsets.g)) / uv_scale)) +
 		 ((south_face * ffloor_mesh) * (((-VERTEX.xy + 0.5) + vec2(0.0, floor_tex_offsets.b)) / uv_scale)) +
@@ -122,7 +125,10 @@ void vertex() {
 		 ((south_face * fceiling_mesh) * (((-VERTEX.xy + 0.5) + vec2(0.0, ceiling_tex_offsets.b)) / uv_scale)) +
 		 ((west_face * fceiling_mesh) * (((-VERTEX.zy + 0.5) + vec2(0.0, ceiling_tex_offsets.a)) / uv_scale));
 
-	VERTEX.y += height_and_face_offset[ceiling_mesh];
+	VERTEX.y += ((top_vert * fceiling_mesh) * mesh_face_heights.r) + 
+				((bottom_vert * fceiling_mesh) * mesh_face_heights.g) + 
+				((top_vert * ffloor_mesh) * mesh_face_heights.b) + 
+				((bottom_vert * ffloor_mesh) * mesh_face_heights.a);
 	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	NORMAL = normalize((MODELVIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	BINORMAL = normalize((MODELVIEW_MATRIX * vec4(BINORMAL, 0.0)).xyz);
