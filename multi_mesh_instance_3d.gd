@@ -1,45 +1,146 @@
 extends MultiMeshInstance3D
 
-func set_view_positions(positions : int):
-	multimesh.instance_count = positions * 2
+var _heights_and_face_offsets : Image
+var _face_hues_and_biases : Image
+var _floor_north_south_hues : Image
+var _floor_north_south_biases : Image
+var _floor_east_west_hues : Image
+var _floor_east_west_biases : Image
+var _floor_side_texture_offsets : Image
+var _ceiling_north_south_hues : Image
+var _ceiling_north_south_biases : Image
+var _ceiling_east_west_hues : Image
+var _ceiling_east_west_biases : Image
+var _ceiling_side_texture_offsets : Image
+var heights_and_face_offsets_tex : ImageTexture
+var face_hues_and_biases_tex : ImageTexture
+var floor_north_south_hues_tex : ImageTexture
+var floor_north_south_biases_tex : ImageTexture
+var floor_east_west_hues_tex : ImageTexture
+var floor_east_west_biases_tex : ImageTexture
+var floor_side_texture_offsets_tex : ImageTexture
+var ceiling_north_south_hues_tex : ImageTexture
+var ceiling_north_south_biases_tex : ImageTexture
+var ceiling_east_west_hues_tex : ImageTexture
+var ceiling_east_west_biases_tex : ImageTexture
+var ceiling_side_texture_offsets_tex : ImageTexture
 
-func refresh(floor_height : Array[float],
-			 floor_top_hue : Array[float],
-			 floor_top_bias : Array[float],
-			 floor_bottom_hue : Array[float],
-			 floor_bottom_bias : Array[float],
-			 floor_face_hue : Array[float],
-			 floor_face_bias : Array[float],
-			 floor_side_texture_offset : Array[float],
-			 floor_face_texture_offset : Array[float],
-			 ceiling_height : Array[float],
-			 ceiling_top_hue : Array[float],
-			 ceiling_top_bias : Array[float],
-			 ceiling_bottom_hue : Array[float],
-			 ceiling_bottom_bias : Array[float],
-			 ceiling_face_hue : Array[float],
-			 ceiling_face_bias : Array[float],
-			 ceiling_side_texture_offset : Array[float],
-			 ceiling_face_texture_offset : Array[float],
-			 positions : Array[Vector2i],
-			 pos : Vector2i):
-	# color.r - top hue
-	# color.g - top bias
-	# color.b - bottom hue
-	# color.a - bottom bias
-	# custom.r - face hue
-	# custom.g - face bias
-	# custom.b - side texture.v
-	# custom.a - face texture.v
+var _mesh : MeshInstance3D
+var positions_north : ImageTexture
+var positions_east : ImageTexture
+var positions_south : ImageTexture
+var positions_west : ImageTexture
 
-	var time : int = Time.get_ticks_usec()
-	var half_array : int = multimesh.instance_count / 2
-	for i in half_array:
-		multimesh.set_instance_transform(i, Transform3D(Basis(), Vector3(positions[i].x, floor_height[i], positions[i].y)))
-		multimesh.set_instance_color(i, Color(floor_top_hue[i], floor_top_bias[i], floor_bottom_hue[i], floor_bottom_bias[i]))
-		multimesh.set_instance_custom_data(i, Color(floor_face_hue[i], floor_face_bias[i], floor_side_texture_offset[i], floor_face_texture_offset[i]))
-		multimesh.set_instance_transform(half_array + i, Transform3D(Basis(), Vector3(positions[i].x, ceiling_height[i], positions[i].y)))
-		multimesh.set_instance_color(half_array + i, Color(ceiling_top_hue[i], ceiling_top_bias[i], ceiling_bottom_hue[i], ceiling_bottom_bias[i]))
-		multimesh.set_instance_custom_data(half_array + i, Color(ceiling_face_hue[i], ceiling_face_bias[i], ceiling_side_texture_offset[i], ceiling_face_texture_offset[i]))
-	time = Time.get_ticks_usec() - time
-	print("%d us Refresh time " % time)
+func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
+						 heights_and_face_offsets : Image, face_hues_and_biases : Image,
+						 floor_north_south_hues : Image, floor_north_south_biases : Image,
+						 floor_east_west_hues : Image, floor_east_west_biases : Image,
+						 floor_side_texture_offsets : Image,
+						 ceiling_north_south_hues : Image, ceiling_north_south_biases : Image,
+						 ceiling_east_west_hues : Image, ceiling_east_west_biases : Image,
+						 ceiling_side_texture_offsets : Image):
+	_mesh = mesh
+	var positions : Array[Vector2i] = Array([], TYPE_VECTOR2I, "", null)
+	var count : int = 0
+	for i in depth:
+		var width = ((int(ceil(atan(fov / 180 * PI) * (i + 1))) - 1) * 2) + 1
+		count += width
+		for j in width:
+			positions.append(Vector2i(j - (width / 2), i))
+	# get the smallest power of 2 it'll fit
+	# probably not needed but it doesn't hurt
+	var image_w : int = int(round(pow(2, ceil(log(count) / log(2)))))
+	# TODO: positions may need a 0.5 bias
+	var positions_north_image : Image = Image.create_empty(image_w, 1, false, Image.FORMAT_RGBAF)
+	var positions_east_image : Image = Image.create_empty(image_w, 1, false, Image.FORMAT_RGBAF)
+	var positions_south_image : Image = Image.create_empty(image_w, 1, false, Image.FORMAT_RGBAF)
+	var positions_west_image : Image = Image.create_empty(image_w, 1, false, Image.FORMAT_RGBAF)
+	for i in len(positions):
+		positions_north_image.set_pixel(i, 0, Color(positions[i].x, positions[i].y, 0.0, 1.0))
+		positions_east_image.set_pixel(i, 0, Color(positions[i].y, -positions[i].x, 0.0, 1.0))
+		positions_south_image.set_pixel(i, 0, Color(-positions[i].x, -positions[i].y, 0.0, 1.0))
+		positions_west_image.set_pixel(i, 0, Color(-positions[i].y, positions[i].x, 0.0, 1.0))
+	positions_north = ImageTexture.create_from_image(positions_north_image)
+	positions_east = ImageTexture.create_from_image(positions_north_image)
+	positions_south = ImageTexture.create_from_image(positions_north_image)
+	positions_west = ImageTexture.create_from_image(positions_north_image)
+	_mesh.mesh.material.set_shader_parameter(&'world_positions', positions_north)
+	_mesh.mesh.material.set_shader_parameter(&'max_depth', depth)
+	_mesh.mesh.material.set_shader_parameter(&'count', count)
+
+	multimesh.instance_count = len(positions) * 2
+	for i in len(positions):
+		multimesh.set_instance_transform(i, Transform3D(Basis(), Vector3(positions[i].x, 0.0, positions[i].y)))
+		multimesh.set_instance_transform(len(positions) + i, Transform3D(Basis(), Vector3(positions[i].x, 0.0, positions[i].y)))
+	_heights_and_face_offsets = heights_and_face_offsets
+	_face_hues_and_biases = face_hues_and_biases
+	_floor_north_south_hues = floor_north_south_hues
+	_floor_north_south_biases = floor_north_south_biases
+	_floor_east_west_hues = floor_east_west_hues
+	_floor_east_west_biases = floor_east_west_biases
+	_floor_side_texture_offsets = floor_side_texture_offsets
+	_ceiling_north_south_hues = ceiling_north_south_hues
+	_ceiling_north_south_biases = ceiling_north_south_biases
+	_ceiling_east_west_hues = ceiling_east_west_hues
+	_ceiling_east_west_biases = ceiling_east_west_biases
+	_ceiling_side_texture_offsets = ceiling_side_texture_offsets
+	heights_and_face_offsets_tex = ImageTexture.create_from_image(heights_and_face_offsets)
+	face_hues_and_biases_tex = ImageTexture.create_from_image(face_hues_and_biases)
+	floor_north_south_hues_tex = ImageTexture.create_from_image(floor_north_south_hues)
+	floor_north_south_biases_tex = ImageTexture.create_from_image(floor_north_south_biases)
+	floor_east_west_hues_tex = ImageTexture.create_from_image(floor_east_west_hues)
+	floor_east_west_biases_tex = ImageTexture.create_from_image(floor_east_west_biases)
+	floor_side_texture_offsets_tex = ImageTexture.create_from_image(floor_side_texture_offsets)
+	ceiling_north_south_hues_tex = ImageTexture.create_from_image(ceiling_north_south_hues)
+	ceiling_north_south_biases_tex = ImageTexture.create_from_image(ceiling_north_south_biases)
+	ceiling_east_west_hues_tex = ImageTexture.create_from_image(ceiling_east_west_hues)
+	ceiling_east_west_biases_tex = ImageTexture.create_from_image(ceiling_east_west_biases)
+	ceiling_side_texture_offsets_tex = ImageTexture.create_from_image(ceiling_side_texture_offsets)
+	_mesh.mesh.material.set_shader_parameter(&'heights_and_face_offsets',
+											heights_and_face_offsets_tex)
+	_mesh.mesh.material.set_shader_parameter(&'face_hues_and_biases',
+											face_hues_and_biases_tex)
+	_mesh.mesh.material.set_shader_parameter(&'face_hues_and_biases',
+											face_hues_and_biases_tex)
+	_mesh.mesh.material.set_shader_parameter(&'floor_north_south_hues',
+											floor_north_south_hues_tex)
+	_mesh.mesh.material.set_shader_parameter(&'floor_north_south_biases',
+											floor_north_south_biases_tex)
+	_mesh.mesh.material.set_shader_parameter(&'floor_east_west_hues',
+											floor_east_west_hues_tex)
+	_mesh.mesh.material.set_shader_parameter(&'floor_east_west_biases',
+											floor_east_west_biases_tex)
+	_mesh.mesh.material.set_shader_parameter(&'floor_side_texture_offsets',
+											floor_side_texture_offsets_tex)
+	_mesh.mesh.material.set_shader_parameter(&'ceiling_north_south_hues',
+											ceiling_north_south_hues_tex)
+	_mesh.mesh.material.set_shader_parameter(&'ceiling_north_south_biases',
+											ceiling_north_south_biases_tex)
+	_mesh.mesh.material.set_shader_parameter(&'ceiling_east_west_hues',
+											ceiling_east_west_hues_tex)
+	_mesh.mesh.material.set_shader_parameter(&'ceiling_east_west_biases',
+											ceiling_east_west_biases_tex)
+	_mesh.mesh.material.set_shader_parameter(&'ceiling_side_texture_offsets',
+											ceiling_side_texture_offsets_tex)
+
+func refresh(heights_and_face_offsets : Image, face_hues_and_biases : Image,
+			 floor_north_south_hues : Image, floor_north_south_biases : Image,
+			 floor_east_west_hues : Image, floor_east_west_biases : Image,
+			 floor_side_texture_offsets : Image,
+			 ceiling_north_south_hues : Image, ceiling_north_south_biases : Image,
+			 ceiling_east_west_hues : Image, ceiling_east_west_biases : Image,
+			 ceiling_side_texture_offsets : Image,
+			 pos : Vector2i, dir : int):
+	# TODO: texture updates
+
+	_mesh.mesh.material.set_shader_parameter(&'view_pos', pos)
+
+	match dir:
+		0:
+			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_north)
+		0:
+			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_east)
+		0:
+			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_south)
+		_:
+			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_west)

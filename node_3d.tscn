@@ -10,16 +10,15 @@ size = Vector2(20, 10)
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_a0tk4"]
 render_priority = 0
 shader = ExtResource("2_a0tk4")
-shader_parameter/depth = 0.0
+shader_parameter/max_depth = 0.0
 shader_parameter/count = 0
+shader_parameter/view_pos = Vector2(0, 0)
 
 [sub_resource type="BoxMesh" id="BoxMesh_a0tk4"]
 material = SubResource("ShaderMaterial_a0tk4")
 
 [sub_resource type="MultiMesh" id="MultiMesh_r3fl7"]
 transform_format = 1
-use_colors = true
-use_custom_data = true
 mesh = SubResource("BoxMesh_a0tk4")
 
 [sub_resource type="Environment" id="Environment_a202f"]
