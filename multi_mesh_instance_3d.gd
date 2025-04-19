@@ -32,6 +32,7 @@ var positions_south : ImageTexture
 var positions_west : ImageTexture
 
 func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
+						 texture : CompressedTexture2D,
 						 heights_and_face_offsets : Image, face_hues_and_biases : Image,
 						 floor_north_south_hues : Image, floor_north_south_biases : Image,
 						 floor_east_west_hues : Image, floor_east_west_biases : Image,
@@ -40,6 +41,7 @@ func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
 						 ceiling_east_west_hues : Image, ceiling_east_west_biases : Image,
 						 ceiling_side_texture_offsets : Image):
 	_mesh = mesh
+	_mesh.mesh.material.set_shader_parameter(&'albedo_texture', texture)
 	var positions : Array[Vector2i] = Array([], TYPE_VECTOR2I, "", null)
 	var count : int = 0
 	for i in depth:

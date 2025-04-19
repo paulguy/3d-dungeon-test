@@ -1,5 +1,8 @@
 extends Node3D
 
+# TODO: movement
+#       editing parameters
+
 const VIEW_DEPTH : int = 39
 const TEST_WORLD_WIDTH : int = 128
 const TEST_WORLD_HEIGHT : int = 128
@@ -36,19 +39,31 @@ func _ready():
 	pos = Vector2i(64, 64)
 	# heights_and_face_offsets.fill(Color(-1.0, 0.0, 1.0, 0.0))
 
+	floor_north_south_hues.fill(Color(0.2, 0.4, 0.6, 0.8))
+	floor_north_south_biases.fill(Color(1.5, 0.5, 1.5, 0.5))
+	floor_east_west_hues.fill(Color(0.1, 0.3, 0.5, 0.7))
+	floor_east_west_biases.fill(Color(1.5, 0.5, 1.5, 0.5))
+	floor_side_texture_offsets.fill(Color(1.0, 1.0, 1.0, 1.0))
+	ceiling_north_south_hues.fill(Color(0.5, 0.6, 0.8, 1.0))
+	ceiling_north_south_biases.fill(Color(0.5, 1.5, 0.5, 1.5))
+	ceiling_east_west_hues.fill(Color(0.3, 0.5, 0.7, 0.9))
+	ceiling_east_west_biases.fill(Color(0.5, 1.5, 0.5, 1.5))
+	ceiling_side_texture_offsets.fill(Color(2.0, 2.0, 2.0, 2.0))
+
 	for y in TEST_WORLD_WIDTH:
 		for x in TEST_WORLD_HEIGHT:
 			var div : float = ((y * TEST_WORLD_WIDTH) + x) % 2 + 1
 			face_hues_and_biases.set_pixel(x, y, Color(0.5,
-													   1.0 / div,
 													   0.0,
-													   0.5 / div))
-			heights_and_face_offsets.set_pixel(x, y, Color((sin(x / 2.0) * cos(y / 2.0)) / 20.0 - 1.05,
+													   0.5 / div,
+													   1.0 / div))
+			heights_and_face_offsets.set_pixel(x, y, Color((sin(x / 2.0) * cos(y / 2.0)) / 2.0 - 1.5,
+														   (sin(x / 2.0) + cos(y / 2.0)) / 2.0 + 1.5,
 														   0.0,
-														   (sin(x / 2.0) + cos(y / 2.0)) / 20.0 + 1.05,
-														   0.0))
+														   3.0))
 
 	$'MultiMeshInstance3D'.set_view_parameters($'Pillar', $'Camera3D'.fov, VIEW_DEPTH,
+											   load("res://textures.png"),
 											   heights_and_face_offsets,
 											   face_hues_and_biases,
 											   floor_north_south_hues,
