@@ -129,25 +129,27 @@ func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
 	_mesh.mesh.material.set_shader_parameter(&'ceiling_side_texture_offsets',
 											ceiling_side_texture_offsets_tex)
 
-func refresh(face_heights : Image, face_offsets : Image,
-			 face_hues_and_biases : Image,
-			 floor_north_south_hues : Image, floor_north_south_biases : Image,
-			 floor_east_west_hues : Image, floor_east_west_biases : Image,
-			 floor_side_texture_offsets : Image,
-			 ceiling_north_south_hues : Image, ceiling_north_south_biases : Image,
-			 ceiling_east_west_hues : Image, ceiling_east_west_biases : Image,
-			 ceiling_side_texture_offsets : Image,
-			 pos : Vector2i, dir : int):
+func update(face_heights : Image, face_offsets : Image,
+			face_hues_and_biases : Image,
+			floor_north_south_hues : Image, floor_north_south_biases : Image,
+			floor_east_west_hues : Image, floor_east_west_biases : Image,
+			floor_side_texture_offsets : Image,
+			ceiling_north_south_hues : Image, ceiling_north_south_biases : Image,
+			ceiling_east_west_hues : Image, ceiling_east_west_biases : Image,
+			ceiling_side_texture_offsets : Image):
 	# TODO: texture updates
+	pass
 
+func set_pos(pos : Vector2i):
 	_mesh.mesh.material.set_shader_parameter(&'view_pos', pos)
 
+func set_dir(dir : int):
 	match dir:
 		0:
 			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_north)
-		0:
+		1:
 			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_east)
-		0:
+		2:
 			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_south)
 		_:
 			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_west)

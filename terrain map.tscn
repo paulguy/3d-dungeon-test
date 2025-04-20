@@ -1,15 +1,15 @@
 [gd_scene load_steps=9 format=3 uid="uid://cwfcgw2p0mu4i"]
 
-[ext_resource type="Script" uid="uid://bjvukp4l2quli" path="res://multi_mesh_instance_3d.gd" id="1_a202f"]
-[ext_resource type="Script" uid="uid://dbuance6pqt3y" path="res://node_3d.gd" id="1_noarx"]
-[ext_resource type="Shader" uid="uid://d1garwujwxrkq" path="res://node_3d.gdshader" id="2_a0tk4"]
+[ext_resource type="Script" uid="uid://dbuance6pqt3y" path="res://terrain map.gd" id="1_h3lwu"]
+[ext_resource type="Shader" uid="uid://d1garwujwxrkq" path="res://terrain multimesh.gdshader" id="2_fqcd4"]
+[ext_resource type="Script" uid="uid://bjvukp4l2quli" path="res://terrain multimesh.gd" id="3_ifrxc"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_noarx"]
 size = Vector2(20, 10)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_a0tk4"]
 render_priority = 0
-shader = ExtResource("2_a0tk4")
+shader = ExtResource("2_fqcd4")
 shader_parameter/max_depth = 0.0
 shader_parameter/count = 0
 shader_parameter/view_pos = Vector2(0, 0)
@@ -25,8 +25,8 @@ mesh = SubResource("BoxMesh_a0tk4")
 background_mode = 1
 ambient_light_color = Color(1, 1, 1, 1)
 
-[node name="Node3D" type="Node3D"]
-script = ExtResource("1_noarx")
+[node name="Terrain Map" type="Node3D"]
+script = ExtResource("1_h3lwu")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0, 0, 0)
@@ -42,10 +42,10 @@ mesh = SubResource("PlaneMesh_noarx")
 visible = false
 mesh = SubResource("BoxMesh_a0tk4")
 
-[node name="MultiMeshInstance3D" type="MultiMeshInstance3D" parent="."]
+[node name="Terrain Multimesh" type="MultiMeshInstance3D" parent="."]
 cast_shadow = 0
 multimesh = SubResource("MultiMesh_r3fl7")
-script = ExtResource("1_a202f")
+script = ExtResource("3_ifrxc")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_a202f")

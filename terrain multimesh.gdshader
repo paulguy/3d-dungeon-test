@@ -42,17 +42,17 @@ uniform sampler2D albedo_texture : filter_nearest;
 
 vec3 hue2rgb(float val, float bias) {
 	// in theory, each color starts at 1.0, then a notch is cut out
-	// W     R     Y     G     C     B     M 
+	// W     R     Y     G     C     B     M
 	// 0.00  0.16  0.33  0.49  0.67  0.84  1.00
 	// _|_  _|_   _|     |     |     |    _|_
 	//  |    |     |  \ _|_   _|_   _|_ /  |
-	
+
 	// |_    |    _|_   _|_   _|_    |     |
 	// |  \ _|_ /  |     |     |  \ _|_   _|_
-	
+
 	// |_    |     |     |    _|_   _|_   _|_
 	// |  \ _|_   _|_   _|_ /  |     |     |
-	
+
 	// bias below 1.0 should darken, bias above 1.0 should "desaturate"
 	return vec3(1.0 - (((clamp(val, 0.33, 0.49) - 0.33) - (max(val, 0.84) - 0.84)) / 0.16),
 				1.0 - ((min(val, 0.16) - (clamp(val, 0.16, 0.32) - 0.16)) / 0.16) - ((clamp(val, 0.67, 0.83) - 0.67) / 0.16),
@@ -90,21 +90,21 @@ void vertex() {
 	vec4 ceil_ew_biases = texelFetch(ceiling_east_west_biases, imap_pos, 0);
 	COLOR.rgb = (((horiz_face * ffloor_mesh) * hue2rgb(face_colors.r, face_colors.b)) +
 				 ((horiz_face * fceiling_mesh) * hue2rgb(face_colors.g, face_colors.a)) +
-				 ((north_face * ffloor_mesh * top_vert) * hue2rgb(floor_ns_hues.r, floor_ns_biases.r)) + 
-				 ((north_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ns_hues.g, floor_ns_biases.g)) + 
-				 ((south_face * ffloor_mesh * top_vert) * hue2rgb(floor_ns_hues.b, floor_ns_biases.b)) + 
+				 ((north_face * ffloor_mesh * top_vert) * hue2rgb(floor_ns_hues.r, floor_ns_biases.r)) +
+				 ((north_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ns_hues.g, floor_ns_biases.g)) +
+				 ((south_face * ffloor_mesh * top_vert) * hue2rgb(floor_ns_hues.b, floor_ns_biases.b)) +
 				 ((south_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ns_hues.a, floor_ns_biases.a)) +
-				 ((east_face * ffloor_mesh * top_vert) * hue2rgb(floor_ew_hues.r, floor_ew_biases.r)) + 
-				 ((east_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ew_hues.g, floor_ew_biases.g)) + 
-				 ((west_face * ffloor_mesh * top_vert) * hue2rgb(floor_ew_hues.b, floor_ew_biases.b)) + 
+				 ((east_face * ffloor_mesh * top_vert) * hue2rgb(floor_ew_hues.r, floor_ew_biases.r)) +
+				 ((east_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ew_hues.g, floor_ew_biases.g)) +
+				 ((west_face * ffloor_mesh * top_vert) * hue2rgb(floor_ew_hues.b, floor_ew_biases.b)) +
 				 ((west_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ew_hues.a, floor_ew_biases.a)) +
-				 ((north_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ns_hues.r, ceil_ns_biases.r)) + 
-				 ((north_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ns_hues.g, ceil_ns_biases.g)) + 
-				 ((south_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ns_hues.b, ceil_ns_biases.b)) + 
+				 ((north_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ns_hues.r, ceil_ns_biases.r)) +
+				 ((north_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ns_hues.g, ceil_ns_biases.g)) +
+				 ((south_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ns_hues.b, ceil_ns_biases.b)) +
 				 ((south_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ns_hues.a, ceil_ns_biases.a)) +
-				 ((east_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ew_hues.r, ceil_ew_biases.r)) + 
-				 ((east_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ew_hues.g, ceil_ew_biases.g)) + 
-				 ((west_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ew_hues.b, ceil_ew_biases.b)) + 
+				 ((east_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ew_hues.r, ceil_ew_biases.r)) +
+				 ((east_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ew_hues.g, ceil_ew_biases.g)) +
+				 ((west_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ew_hues.b, ceil_ew_biases.b)) +
 				 ((west_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ew_hues.a, ceil_ew_biases.a))) *
 				(1.0 - (world_pos.y / (max_depth + 1.0)));
 
@@ -127,9 +127,9 @@ void vertex() {
 		 ((south_face * fceiling_mesh) * (((-VERTEX.xy + 0.5) + vec2(0.0, ceiling_tex_offsets.b) - ceiling_top_offset) / uv_scale)) +
 		 ((west_face * fceiling_mesh) * (((-VERTEX.zy + 0.5) + vec2(0.0, ceiling_tex_offsets.a) - ceiling_top_offset) / uv_scale));
 
-	VERTEX.y = ((top_vert * fceiling_mesh) * mesh_face_heights.r) + 
-			   ((bottom_vert * fceiling_mesh) * mesh_face_heights.g) + 
-			   ((top_vert * ffloor_mesh) * mesh_face_heights.b) + 
+	VERTEX.y = ((top_vert * fceiling_mesh) * mesh_face_heights.r) +
+			   ((bottom_vert * fceiling_mesh) * mesh_face_heights.g) +
+			   ((top_vert * ffloor_mesh) * mesh_face_heights.b) +
 			   ((bottom_vert * ffloor_mesh) * mesh_face_heights.a);
 	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	NORMAL = normalize((MODELVIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);

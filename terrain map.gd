@@ -7,7 +7,10 @@ const VIEW_DEPTH : int = 39
 const TEST_WORLD_WIDTH : int = 128
 const TEST_WORLD_HEIGHT : int = 128
 
-var pos : Vector2i
+@onready var terrain : MultiMeshInstance3D = $'Terrain Multimesh'
+
+var pos : Vector2i = Vector2i(64, 64)
+var dir : int = 0
 
 var face_heights : Image
 var face_offsets : Image
@@ -38,9 +41,6 @@ func _ready():
 	ceiling_east_west_biases = Image.create_empty(TEST_WORLD_WIDTH, TEST_WORLD_HEIGHT, false, Image.FORMAT_RGBAF)
 	ceiling_side_texture_offsets = Image.create_empty(TEST_WORLD_WIDTH, TEST_WORLD_HEIGHT, false, Image.FORMAT_RGBAF)
 
-	pos = Vector2i(64, 64)
-	# heights_and_face_offsets.fill(Color(-1.0, 0.0, 1.0, 0.0))
-
 	floor_north_south_hues.fill(Color(0.2, 0.4, 0.6, 0.8))
 	floor_north_south_biases.fill(Color(1.5, 0.5, 1.5, 0.5))
 	floor_east_west_hues.fill(Color(0.1, 0.3, 0.5, 0.7))
@@ -65,33 +65,23 @@ func _ready():
 											   (sin(x / 2.0) + cos(y / 2.0)) / 2.0 - 1.5,
 											   -3.0))
 
-	$'MultiMeshInstance3D'.set_view_parameters($'Pillar', $'Camera3D'.fov, VIEW_DEPTH,
-											   load("res://textures.png"),
-											   face_heights,
-											   face_offsets,
-											   face_hues_and_biases,
-											   floor_north_south_hues,
-											   floor_north_south_biases,
-											   floor_east_west_hues,
-											   floor_east_west_biases,
-											   floor_side_texture_offsets,
-											   ceiling_north_south_hues,
-											   ceiling_north_south_biases,
-											   ceiling_east_west_hues,
-											   ceiling_east_west_biases,
-											   ceiling_side_texture_offsets)
-	$'MultiMeshInstance3D'.refresh(
-		face_heights,
-		face_offsets,
-		face_hues_and_biases,
-		floor_north_south_hues,
-		floor_north_south_biases,
-		floor_east_west_hues,
-		floor_east_west_biases,
-		floor_side_texture_offsets,
-		ceiling_north_south_hues,
-		ceiling_north_south_biases,
-		ceiling_east_west_hues,
-		ceiling_east_west_biases,
-		ceiling_side_texture_offsets,
-		pos, 0)
+	terrain.set_view_parameters($'Pillar', $'Camera3D'.fov, VIEW_DEPTH,
+								load("res://textures.png"),
+								face_heights,
+								face_offsets,
+								face_hues_and_biases,
+								floor_north_south_hues,
+								floor_north_south_biases,
+								floor_east_west_hues,
+								floor_east_west_biases,
+								floor_side_texture_offsets,
+								ceiling_north_south_hues,
+								ceiling_north_south_biases,
+								ceiling_east_west_hues,
+								ceiling_east_west_biases,
+								ceiling_side_texture_offsets)
+	terrain.set_pos(pos)
+	terrain.set_dir(dir)
+
+func _process(_delta : float):
+	pass
