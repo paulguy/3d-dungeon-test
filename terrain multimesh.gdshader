@@ -4,8 +4,10 @@ render_mode skip_vertex_transform;
 uniform float max_depth; // max depth of meshes
 uniform int count; // count of meshes
 uniform sampler2D world_positions;
-uniform vec2 view_pos; // position in map
+uniform ivec2 view_pos; // position in map
 uniform sampler2D map_positions; // Coordinate offsets for looking up data in textures
+uniform mat3 mesh_transform;
+uniform float view_height_bias;
 
 // r = floor height
 // g = ceiling height
@@ -66,28 +68,31 @@ void vertex() {
 	float fceiling_mesh = float(ceiling_mesh);
 	float ffloor_mesh = float(floor_mesh);
 	vec2 world_pos = texelFetch(world_positions, ivec2(id, 0), 0).rg;
-	vec2 map_pos = texelFetch(map_positions, ivec2(id, 0), 0).rg + view_pos;
-	ivec2 imap_pos = ivec2(map_pos);
+	ivec2 map_pos = ivec2(texelFetch(map_positions, ivec2(id, 0), 0).rg) + view_pos;
+	float view_height = texelFetch(face_heights, view_pos, 0).b;
+
+	vec3 tnormal = NORMAL * mesh_transform;
+	vec3 tvertex = VERTEX * mesh_transform;
 
 	float horiz_face = abs(NORMAL.y); // will be 1.0 on top and bottom
-	float north_face = max(0.0, NORMAL.z);
-	float south_face = -min(0.0, NORMAL.z);
-	float west_face = max(0.0, NORMAL.x);
-	float east_face = -min(0.0, NORMAL.x);
+	float north_face = max(0.0, tnormal.z);
+	float south_face = -min(0.0, tnormal.z);
+	float west_face = max(0.0, tnormal.x);
+	float east_face = -min(0.0, tnormal.x);
 	float top_face = max(0.0, NORMAL.y);
 	float bottom_face = -min(0.0, NORMAL.y);
 	float top_vert = max(VERTEX.y, 0.0) * 2.0;
 	float bottom_vert = min(VERTEX.y, 0.0) * -2.0;
 
-	vec4 face_colors = texelFetch(face_hues_and_biases, imap_pos, 0);
-	vec4 floor_ns_hues = texelFetch(floor_north_south_hues, imap_pos, 0);
-	vec4 floor_ns_biases = texelFetch(floor_north_south_biases, imap_pos, 0);
-	vec4 floor_ew_hues = texelFetch(floor_east_west_hues, imap_pos, 0);
-	vec4 floor_ew_biases = texelFetch(floor_east_west_biases, imap_pos, 0);
-	vec4 ceil_ns_hues = texelFetch(ceiling_north_south_hues, imap_pos, 0);
-	vec4 ceil_ns_biases = texelFetch(ceiling_north_south_biases, imap_pos, 0);
-	vec4 ceil_ew_hues = texelFetch(ceiling_east_west_hues, imap_pos, 0);
-	vec4 ceil_ew_biases = texelFetch(ceiling_east_west_biases, imap_pos, 0);
+	vec4 face_colors = texelFetch(face_hues_and_biases, map_pos, 0);
+	vec4 floor_ns_hues = texelFetch(floor_north_south_hues, map_pos, 0);
+	vec4 floor_ns_biases = texelFetch(floor_north_south_biases, map_pos, 0);
+	vec4 floor_ew_hues = texelFetch(floor_east_west_hues, map_pos, 0);
+	vec4 floor_ew_biases = texelFetch(floor_east_west_biases, map_pos, 0);
+	vec4 ceil_ns_hues = texelFetch(ceiling_north_south_hues, map_pos, 0);
+	vec4 ceil_ns_biases = texelFetch(ceiling_north_south_biases, map_pos, 0);
+	vec4 ceil_ew_hues = texelFetch(ceiling_east_west_hues, map_pos, 0);
+	vec4 ceil_ew_biases = texelFetch(ceiling_east_west_biases, map_pos, 0);
 	COLOR.rgb = (((horiz_face * ffloor_mesh) * hue2rgb(face_colors.r, face_colors.b)) +
 				 ((horiz_face * fceiling_mesh) * hue2rgb(face_colors.g, face_colors.a)) +
 				 ((north_face * ffloor_mesh * top_vert) * hue2rgb(floor_ns_hues.r, floor_ns_biases.r)) +
@@ -109,28 +114,28 @@ void vertex() {
 				(1.0 - (world_pos.y / (max_depth + 1.0)));
 
 	ivec2 tex_size = textureSize(albedo_texture, 0);
-	vec4 mesh_face_heights = texelFetch(face_heights, imap_pos, 0);
-	vec4 mesh_face_offsets = texelFetch(face_offsets, imap_pos, 0);
-	vec4 floor_tex_offsets = texelFetch(floor_side_texture_offsets, imap_pos, 0);
-	vec4 ceiling_tex_offsets = texelFetch(ceiling_side_texture_offsets, imap_pos, 0);
+	vec4 mesh_face_heights = texelFetch(face_heights, map_pos, 0);
+	vec4 mesh_face_offsets = texelFetch(face_offsets, map_pos, 0);
+	vec4 floor_tex_offsets = texelFetch(floor_side_texture_offsets, map_pos, 0);
+	vec4 ceiling_tex_offsets = texelFetch(ceiling_side_texture_offsets, map_pos, 0);
 	vec2 uv_scale = vec2(1.0, float(tex_size.y / tex_size.x));
 	vec2 floor_bottom_offset = vec2(0.0, bottom_vert * (mesh_face_heights.b - mesh_face_heights.a));
 	vec2 ceiling_top_offset = vec2(0.0, top_vert * (mesh_face_heights.r - mesh_face_heights.g));
-	UV = (top_face * (((VERTEX.zx + 0.5) + vec2(0.0, mesh_face_offsets.r)) / uv_scale)) +
-		 (bottom_face * (((VERTEX.zx + 0.5) + vec2(0.0, mesh_face_offsets.g)) / uv_scale)) +
-		 ((north_face * ffloor_mesh) * (((vec2(VERTEX.x, -VERTEX.y) + 0.5) + vec2(0.0, floor_tex_offsets.r) + floor_bottom_offset) / uv_scale)) +
-		 ((east_face * ffloor_mesh) * (((vec2(VERTEX.z, -VERTEX.y) + 0.5) + vec2(0.0, floor_tex_offsets.g) + floor_bottom_offset) / uv_scale)) +
-		 ((south_face * ffloor_mesh) * (((-VERTEX.xy + 0.5) + vec2(0.0, floor_tex_offsets.b) + floor_bottom_offset) / uv_scale)) +
-		 ((west_face * ffloor_mesh) * (((-VERTEX.zy + 0.5) + vec2(0.0, floor_tex_offsets.a) + floor_bottom_offset) / uv_scale)) +
-		 ((north_face * fceiling_mesh) * (((vec2(VERTEX.x, -VERTEX.y) + 0.5) + vec2(0.0, ceiling_tex_offsets.r) - ceiling_top_offset) / uv_scale)) +
-		 ((east_face * fceiling_mesh) * (((vec2(VERTEX.z, -VERTEX.y) + 0.5) + vec2(0.0, ceiling_tex_offsets.g) - ceiling_top_offset) / uv_scale)) +
-		 ((south_face * fceiling_mesh) * (((-VERTEX.xy + 0.5) + vec2(0.0, ceiling_tex_offsets.b) - ceiling_top_offset) / uv_scale)) +
-		 ((west_face * fceiling_mesh) * (((-VERTEX.zy + 0.5) + vec2(0.0, ceiling_tex_offsets.a) - ceiling_top_offset) / uv_scale));
+	UV = (top_face * (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.r)) / uv_scale)) +
+		 (bottom_face * (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.g)) / uv_scale)) +
+		 ((north_face * ffloor_mesh) * (((vec2(tvertex.x, -tvertex.y) + 0.5) + vec2(0.0, floor_tex_offsets.r) + floor_bottom_offset) / uv_scale)) +
+		 ((east_face * ffloor_mesh) * (((vec2(tvertex.z, -tvertex.y) + 0.5) + vec2(0.0, floor_tex_offsets.g) + floor_bottom_offset) / uv_scale)) +
+		 ((south_face * ffloor_mesh) * (((-tvertex.xy + 0.5) + vec2(0.0, floor_tex_offsets.b) + floor_bottom_offset) / uv_scale)) +
+		 ((west_face * ffloor_mesh) * (((-tvertex.zy + 0.5) + vec2(0.0, floor_tex_offsets.a) + floor_bottom_offset) / uv_scale)) +
+		 ((north_face * fceiling_mesh) * (((vec2(tvertex.x, -tvertex.y) + 0.5) + vec2(0.0, ceiling_tex_offsets.r) - ceiling_top_offset) / uv_scale)) +
+		 ((east_face * fceiling_mesh) * (((vec2(tvertex.z, -tvertex.y) + 0.5) + vec2(0.0, ceiling_tex_offsets.g) - ceiling_top_offset) / uv_scale)) +
+		 ((south_face * fceiling_mesh) * (((-tvertex.xy + 0.5) + vec2(0.0, ceiling_tex_offsets.b) - ceiling_top_offset) / uv_scale)) +
+		 ((west_face * fceiling_mesh) * (((-tvertex.zy + 0.5) + vec2(0.0, ceiling_tex_offsets.a) - ceiling_top_offset) / uv_scale));
 
 	VERTEX.y = ((top_vert * fceiling_mesh) * mesh_face_heights.r) +
 			   ((bottom_vert * fceiling_mesh) * mesh_face_heights.g) +
 			   ((top_vert * ffloor_mesh) * mesh_face_heights.b) +
-			   ((bottom_vert * ffloor_mesh) * mesh_face_heights.a);
+			   ((bottom_vert * ffloor_mesh) * mesh_face_heights.a) - view_height - view_height_bias;
 	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	NORMAL = normalize((MODELVIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	BINORMAL = normalize((MODELVIEW_MATRIX * vec4(BINORMAL, 0.0)).xyz);

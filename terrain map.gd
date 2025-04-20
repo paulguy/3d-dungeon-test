@@ -4,6 +4,7 @@ extends Node3D
 #       editing parameters
 
 const VIEW_DEPTH : int = 39
+const VIEW_HEIGHT : float = 0.5
 const TEST_WORLD_WIDTH : int = 128
 const TEST_WORLD_HEIGHT : int = 128
 
@@ -45,12 +46,12 @@ func _ready():
 	floor_north_south_biases.fill(Color(1.5, 0.5, 1.5, 0.5))
 	floor_east_west_hues.fill(Color(0.1, 0.3, 0.5, 0.7))
 	floor_east_west_biases.fill(Color(1.5, 0.5, 1.5, 0.5))
-	floor_side_texture_offsets.fill(Color(1.0, 1.0, 1.0, 1.0))
+	floor_side_texture_offsets.fill(Color(1.0, 0.0, 1.0, 3.0))
 	ceiling_north_south_hues.fill(Color(0.5, 0.6, 0.8, 1.0))
 	ceiling_north_south_biases.fill(Color(0.5, 1.5, 0.5, 1.5))
 	ceiling_east_west_hues.fill(Color(0.3, 0.5, 0.7, 0.9))
 	ceiling_east_west_biases.fill(Color(0.5, 1.5, 0.5, 1.5))
-	ceiling_side_texture_offsets.fill(Color(2.0, 2.0, 2.0, 2.0))
+	ceiling_side_texture_offsets.fill(Color(0.0, 2.0, 3.0, 2.0))
 	face_offsets.fill(Color(0.0, 3.0, 0.0, 0.0))
 
 	for y in TEST_WORLD_WIDTH:
@@ -65,7 +66,7 @@ func _ready():
 											   (sin(x / 2.0) + cos(y / 2.0)) / 2.0 - 1.5,
 											   -3.0))
 
-	terrain.set_view_parameters($'Pillar', $'Camera3D'.fov, VIEW_DEPTH,
+	terrain.set_view_parameters($'Pillar', $'Camera3D'.fov, VIEW_DEPTH, VIEW_HEIGHT,
 								load("res://textures.png"),
 								face_heights,
 								face_offsets,
@@ -84,4 +85,47 @@ func _ready():
 	terrain.set_dir(dir)
 
 func _process(_delta : float):
-	pass
+	var update_pos : bool = false
+	var update_dir : bool = false
+
+	if Input.is_action_just_pressed(&'forward'):
+		match dir:
+			0: # north
+				pos.y += 1
+			1: # east
+				pos.x -= 1
+			2: # south
+				pos.y -= 1
+			_: # west
+				pos.x += 1
+		update_pos = true
+
+	if Input.is_action_just_pressed(&'back'):
+		match dir:
+			0: # north
+				pos.y -= 1
+			1: # east
+				pos.x += 1
+			2: # south
+				pos.y += 1
+			_: # west
+				pos.x -= 1
+		update_pos = true
+
+	if Input.is_action_just_pressed(&'turn left'):
+		dir -= 1
+		update_dir = true
+
+	if Input.is_action_just_pressed(&'turn right'):
+		dir += 1
+		update_dir = true
+
+	if update_pos:
+		terrain.set_pos(pos)
+
+	if update_dir:
+		if dir < 0:
+			dir = 3
+		elif dir > 3:
+			dir = 0
+		terrain.set_dir(dir)

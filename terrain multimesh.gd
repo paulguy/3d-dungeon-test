@@ -32,8 +32,12 @@ var positions_north : ImageTexture
 var positions_east : ImageTexture
 var positions_south : ImageTexture
 var positions_west : ImageTexture
+var transform_north : Basis = Basis(Vector3(0.0, 1.0, 0.0), 0.0)
+var transform_east : Basis = Basis(Vector3(0.0, 1.0, 0.0), PI * 0.5)
+var transform_south : Basis = Basis(Vector3(0.0, 1.0, 0.0), PI)
+var transform_west : Basis = Basis(Vector3(0.0, 1.0, 0.0), PI * 1.5)
 
-func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
+func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int, view_height : float,
 						 texture : CompressedTexture2D, face_heights : Image,
 						 face_offsets : Image, face_hues_and_biases : Image,
 						 floor_north_south_hues : Image, floor_north_south_biases : Image,
@@ -61,16 +65,18 @@ func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int,
 	var positions_west_image : Image = Image.create_empty(image_w, 1, false, Image.FORMAT_RGBAF)
 	for i in len(positions):
 		positions_north_image.set_pixel(i, 0, Color(positions[i].x, positions[i].y, 0.0, 1.0))
-		positions_east_image.set_pixel(i, 0, Color(positions[i].y, -positions[i].x, 0.0, 1.0))
+		positions_east_image.set_pixel(i, 0, Color(-positions[i].y, positions[i].x, 0.0, 1.0))
 		positions_south_image.set_pixel(i, 0, Color(-positions[i].x, -positions[i].y, 0.0, 1.0))
-		positions_west_image.set_pixel(i, 0, Color(-positions[i].y, positions[i].x, 0.0, 1.0))
+		positions_west_image.set_pixel(i, 0, Color(positions[i].y, -positions[i].x, 0.0, 1.0))
 	positions_north = ImageTexture.create_from_image(positions_north_image)
-	positions_east = ImageTexture.create_from_image(positions_north_image)
-	positions_south = ImageTexture.create_from_image(positions_north_image)
-	positions_west = ImageTexture.create_from_image(positions_north_image)
+	positions_east = ImageTexture.create_from_image(positions_east_image)
+	positions_south = ImageTexture.create_from_image(positions_south_image)
+	positions_west = ImageTexture.create_from_image(positions_west_image)
 	_mesh.mesh.material.set_shader_parameter(&'world_positions', positions_north)
+	_mesh.mesh.material.set_shader_parameter(&'mesh_transform', transform_north)
 	_mesh.mesh.material.set_shader_parameter(&'max_depth', depth)
 	_mesh.mesh.material.set_shader_parameter(&'count', count)
+	_mesh.mesh.material.set_shader_parameter(&'view_height_bias', view_height)
 
 	multimesh.instance_count = len(positions) * 2
 	for i in len(positions):
@@ -147,9 +153,16 @@ func set_dir(dir : int):
 	match dir:
 		0:
 			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_north)
+			_mesh.mesh.material.set_shader_parameter(&'mesh_transform', transform_north)
 		1:
 			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_east)
+			_mesh.mesh.material.set_shader_parameter(&'mesh_transform', transform_east)
 		2:
 			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_south)
+			_mesh.mesh.material.set_shader_parameter(&'mesh_transform', transform_south)
 		_:
 			_mesh.mesh.material.set_shader_parameter(&'map_positions', positions_west)
+			_mesh.mesh.material.set_shader_parameter(&'mesh_transform', transform_west)
+
+func set_view_height(height : float):
+	_mesh.mesh.material.set_shader_parameter(&'view_height_bias', height)

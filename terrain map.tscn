@@ -12,7 +12,9 @@ render_priority = 0
 shader = ExtResource("2_fqcd4")
 shader_parameter/max_depth = 0.0
 shader_parameter/count = 0
-shader_parameter/view_pos = Vector2(0, 0)
+shader_parameter/view_pos = Vector2i(0, 0)
+shader_parameter/mesh_transform = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
+shader_parameter/view_height_bias = 0.0
 
 [sub_resource type="BoxMesh" id="BoxMesh_a0tk4"]
 material = SubResource("ShaderMaterial_a0tk4")
