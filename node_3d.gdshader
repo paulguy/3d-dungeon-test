@@ -114,21 +114,23 @@ void vertex() {
 	vec4 floor_tex_offsets = texelFetch(floor_side_texture_offsets, imap_pos, 0);
 	vec4 ceiling_tex_offsets = texelFetch(ceiling_side_texture_offsets, imap_pos, 0);
 	vec2 uv_scale = vec2(1.0, float(tex_size.y / tex_size.x));
+	vec2 floor_bottom_offset = vec2(0.0, bottom_vert * (mesh_face_heights.b - mesh_face_heights.a));
+	vec2 ceiling_top_offset = vec2(0.0, top_vert * (mesh_face_heights.r - mesh_face_heights.g));
 	UV = (top_face * (((VERTEX.zx + 0.5) + vec2(0.0, mesh_face_offsets.r)) / uv_scale)) +
 		 (bottom_face * (((VERTEX.zx + 0.5) + vec2(0.0, mesh_face_offsets.g)) / uv_scale)) +
-		 ((north_face * ffloor_mesh) * (((vec2(VERTEX.x, -VERTEX.y) + 0.5) + vec2(0.0, floor_tex_offsets.r)) / uv_scale)) +
-		 ((east_face * ffloor_mesh) * (((vec2(VERTEX.z, -VERTEX.y) + 0.5) + vec2(0.0, floor_tex_offsets.g)) / uv_scale)) +
-		 ((south_face * ffloor_mesh) * (((-VERTEX.xy + 0.5) + vec2(0.0, floor_tex_offsets.b)) / uv_scale)) +
-		 ((west_face * ffloor_mesh) * (((-VERTEX.zy + 0.5) + vec2(0.0, floor_tex_offsets.a)) / uv_scale)) +
-		 ((north_face * fceiling_mesh) * (((vec2(VERTEX.x, -VERTEX.y) + 0.5) + vec2(0.0, ceiling_tex_offsets.r)) / uv_scale)) +
-		 ((east_face * fceiling_mesh) * (((vec2(VERTEX.z, -VERTEX.y) + 0.5) + vec2(0.0, ceiling_tex_offsets.g)) / uv_scale)) +
-		 ((south_face * fceiling_mesh) * (((-VERTEX.xy + 0.5) + vec2(0.0, ceiling_tex_offsets.b)) / uv_scale)) +
-		 ((west_face * fceiling_mesh) * (((-VERTEX.zy + 0.5) + vec2(0.0, ceiling_tex_offsets.a)) / uv_scale));
+		 ((north_face * ffloor_mesh) * (((vec2(VERTEX.x, -VERTEX.y) + 0.5) + vec2(0.0, floor_tex_offsets.r) + floor_bottom_offset) / uv_scale)) +
+		 ((east_face * ffloor_mesh) * (((vec2(VERTEX.z, -VERTEX.y) + 0.5) + vec2(0.0, floor_tex_offsets.g) + floor_bottom_offset) / uv_scale)) +
+		 ((south_face * ffloor_mesh) * (((-VERTEX.xy + 0.5) + vec2(0.0, floor_tex_offsets.b) + floor_bottom_offset) / uv_scale)) +
+		 ((west_face * ffloor_mesh) * (((-VERTEX.zy + 0.5) + vec2(0.0, floor_tex_offsets.a) + floor_bottom_offset) / uv_scale)) +
+		 ((north_face * fceiling_mesh) * (((vec2(VERTEX.x, -VERTEX.y) + 0.5) + vec2(0.0, ceiling_tex_offsets.r) - ceiling_top_offset) / uv_scale)) +
+		 ((east_face * fceiling_mesh) * (((vec2(VERTEX.z, -VERTEX.y) + 0.5) + vec2(0.0, ceiling_tex_offsets.g) - ceiling_top_offset) / uv_scale)) +
+		 ((south_face * fceiling_mesh) * (((-VERTEX.xy + 0.5) + vec2(0.0, ceiling_tex_offsets.b) - ceiling_top_offset) / uv_scale)) +
+		 ((west_face * fceiling_mesh) * (((-VERTEX.zy + 0.5) + vec2(0.0, ceiling_tex_offsets.a) - ceiling_top_offset) / uv_scale));
 
-	VERTEX.y += ((top_vert * fceiling_mesh) * mesh_face_heights.r) + 
-				((bottom_vert * fceiling_mesh) * mesh_face_heights.g) + 
-				((top_vert * ffloor_mesh) * mesh_face_heights.b) + 
-				((bottom_vert * ffloor_mesh) * mesh_face_heights.a);
+	VERTEX.y = ((top_vert * fceiling_mesh) * mesh_face_heights.r) + 
+			   ((bottom_vert * fceiling_mesh) * mesh_face_heights.g) + 
+			   ((top_vert * ffloor_mesh) * mesh_face_heights.b) + 
+			   ((bottom_vert * ffloor_mesh) * mesh_face_heights.a);
 	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	NORMAL = normalize((MODELVIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	BINORMAL = normalize((MODELVIEW_MATRIX * vec4(BINORMAL, 0.0)).xyz);
