@@ -9,15 +9,15 @@ uniform sampler2D map_positions; // Coordinate offsets for looking up data in te
 uniform mat3 mesh_transform;
 uniform float view_height_bias;
 
-// r = floor height
-// g = ceiling height
-// b = floor texture offset
-// a = ceiling texture_offset
+// r - ceiling top
+// g - ceiling bottom
+// b - floor top
+// a - floor bottom
 uniform sampler2D face_heights;
 uniform sampler2D face_offsets;
 // r = floor hue
-// g = ceiling hue
-// b = floor bias
+// g = floor bias
+// b = ceiling hue
 // a = ceiling bias
 uniform sampler2D face_hues_and_biases;
 // r - north top
@@ -39,8 +39,6 @@ uniform sampler2D ceiling_east_west_hues;
 uniform sampler2D ceiling_east_west_biases;
 uniform sampler2D ceiling_side_texture_offsets;
 uniform sampler2D albedo_texture : filter_nearest;
-/* TODO: block heights
-*/
 
 vec3 hue2rgb(float val, float bias) {
 	// in theory, each color starts at 1.0, then a notch is cut out
@@ -93,8 +91,70 @@ void vertex() {
 	vec4 ceil_ns_biases = texelFetch(ceiling_north_south_biases, map_pos, 0);
 	vec4 ceil_ew_hues = texelFetch(ceiling_east_west_hues, map_pos, 0);
 	vec4 ceil_ew_biases = texelFetch(ceiling_east_west_biases, map_pos, 0);
-	COLOR.rgb = (((horiz_face * ffloor_mesh) * hue2rgb(face_colors.r, face_colors.b)) +
-				 ((horiz_face * fceiling_mesh) * hue2rgb(face_colors.g, face_colors.a)) +
+
+	if(NORMAL.y > 0.1) { // top face
+		COLOR.rgb = hue2rgb(face_colors.r, face_colors.g);
+	} else if(NORMAL.y < -0.1) { // bottom face
+		COLOR.rgb = hue2rgb(face_colors.b, face_colors.a);
+	} else if(ceiling_mesh > 0) {
+		if(tnormal.z > 0.1) { // north face
+			if(VERTEX.y > 0.0) { // top vert
+				COLOR.rgb = hue2rgb(ceil_ns_hues.r, ceil_ns_biases.r);
+			} else { // bottom vert
+				COLOR.rgb = hue2rgb(ceil_ns_hues.g, ceil_ns_biases.g);
+			}
+		} else if(tnormal.x < -0.1) { // east face
+			if(VERTEX.y > 0.0) { // top vert
+				COLOR.rgb = hue2rgb(ceil_ew_hues.r, ceil_ew_biases.r);
+			} else { // bottom vert
+				COLOR.rgb = hue2rgb(ceil_ew_hues.g, ceil_ew_biases.g);
+			}
+		} else if(tnormal.z < -0.1) { // south face
+			if(VERTEX.y > 0.0) { // top vert
+				COLOR.rgb = hue2rgb(ceil_ns_hues.b, ceil_ns_biases.b);
+			} else { // bottom vert
+				COLOR.rgb = hue2rgb(ceil_ns_hues.a, ceil_ns_biases.a);
+			}
+		} else { // west face
+			if(VERTEX.y > 0.0) { // top vert
+				COLOR.rgb = hue2rgb(ceil_ew_hues.b, ceil_ew_biases.b);
+			} else { // bottom vert
+				COLOR.rgb = hue2rgb(ceil_ew_hues.a, ceil_ew_biases.a);
+			}
+		}
+	} else { // floor mesh
+		if(tnormal.z > 0.1) { // north face
+			if(VERTEX.y > 0.0) { // top vert
+				COLOR.rgb = hue2rgb(floor_ns_hues.r, floor_ns_biases.r);
+			} else { // bottom vert
+				COLOR.rgb = hue2rgb(floor_ns_hues.g, floor_ns_biases.g);
+			}
+		} else if(tnormal.x < -0.1) { // east face
+			if(VERTEX.y > 0.0) { // top vert
+				COLOR.rgb = hue2rgb(floor_ew_hues.r, floor_ew_biases.r);
+			} else { // bottom vert
+				COLOR.rgb = hue2rgb(floor_ew_hues.g, floor_ew_biases.g);
+			}
+		} else if(tnormal.z < -0.1) { // south face
+			if(VERTEX.y > 0.0) { // top vert
+				COLOR.rgb = hue2rgb(floor_ns_hues.b, floor_ns_biases.b);
+			} else { // bottom vert
+				COLOR.rgb = hue2rgb(floor_ns_hues.a, floor_ns_biases.a);
+			}
+		} else { // west face
+			if(VERTEX.y > 0.0) { // top vert
+				COLOR.rgb = hue2rgb(floor_ew_hues.b, floor_ew_biases.b);
+			} else { // bottom vert
+				COLOR.rgb = hue2rgb(floor_ew_hues.a, floor_ew_biases.a);
+			}
+		}
+	}
+
+	COLOR.rgb *= 1.0 - (world_pos.y / (max_depth + 1.0));
+
+/*  "arithmetic" approach, works worse, actually a bit slower
+	COLOR.rgb = ((top_face * hue2rgb(face_colors.r, face_colors.g)) +
+				 (bottom_face * hue2rgb(face_colors.b, face_colors.a)) +
 				 ((north_face * ffloor_mesh * top_vert) * hue2rgb(floor_ns_hues.r, floor_ns_biases.r)) +
 				 ((north_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ns_hues.g, floor_ns_biases.g)) +
 				 ((south_face * ffloor_mesh * top_vert) * hue2rgb(floor_ns_hues.b, floor_ns_biases.b)) +
@@ -112,7 +172,7 @@ void vertex() {
 				 ((west_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ew_hues.b, ceil_ew_biases.b)) +
 				 ((west_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ew_hues.a, ceil_ew_biases.a))) *
 				(1.0 - (world_pos.y / (max_depth + 1.0)));
-
+*/
 	ivec2 tex_size = textureSize(albedo_texture, 0);
 	vec4 mesh_face_heights = texelFetch(face_heights, map_pos, 0);
 	vec4 mesh_face_offsets = texelFetch(face_offsets, map_pos, 0);
