@@ -8,6 +8,7 @@ uniform ivec2 view_pos; // position in map
 uniform sampler2D map_positions; // Coordinate offsets for looking up data in textures
 uniform mat3 mesh_transform;
 uniform float view_height_bias;
+uniform int lookup_tex_width;
 
 // r - ceiling top
 // g - ceiling bottom
@@ -65,8 +66,8 @@ void vertex() {
 	int floor_mesh = -(ceiling_mesh - 1);
 	float fceiling_mesh = float(ceiling_mesh);
 	float ffloor_mesh = float(floor_mesh);
-	vec2 world_pos = texelFetch(world_positions, ivec2(id, 0), 0).rg;
-	ivec2 map_pos = ivec2(texelFetch(map_positions, ivec2(id, 0), 0).rg) + view_pos;
+	vec2 world_pos = texelFetch(world_positions, ivec2(id % lookup_tex_width, id / lookup_tex_width), 0).rg;
+	ivec2 map_pos = ivec2(texelFetch(map_positions, ivec2(id % lookup_tex_width, id / lookup_tex_width), 0).rg) + view_pos;
 	float view_height = texelFetch(face_heights, view_pos, 0).b;
 
 	vec3 tnormal = NORMAL * mesh_transform;
@@ -150,29 +151,8 @@ void vertex() {
 		}
 	}
 
-	COLOR.rgb *= 1.0 - (world_pos.y / (max_depth + 1.0));
+	COLOR.rgb *= pow(1.0 - (-world_pos.y / (max_depth + 1.0)), 2.0);
 
-/*  "arithmetic" approach, works worse, actually a bit slower
-	COLOR.rgb = ((top_face * hue2rgb(face_colors.r, face_colors.g)) +
-				 (bottom_face * hue2rgb(face_colors.b, face_colors.a)) +
-				 ((north_face * ffloor_mesh * top_vert) * hue2rgb(floor_ns_hues.r, floor_ns_biases.r)) +
-				 ((north_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ns_hues.g, floor_ns_biases.g)) +
-				 ((south_face * ffloor_mesh * top_vert) * hue2rgb(floor_ns_hues.b, floor_ns_biases.b)) +
-				 ((south_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ns_hues.a, floor_ns_biases.a)) +
-				 ((east_face * ffloor_mesh * top_vert) * hue2rgb(floor_ew_hues.r, floor_ew_biases.r)) +
-				 ((east_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ew_hues.g, floor_ew_biases.g)) +
-				 ((west_face * ffloor_mesh * top_vert) * hue2rgb(floor_ew_hues.b, floor_ew_biases.b)) +
-				 ((west_face * ffloor_mesh * bottom_vert) * hue2rgb(floor_ew_hues.a, floor_ew_biases.a)) +
-				 ((north_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ns_hues.r, ceil_ns_biases.r)) +
-				 ((north_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ns_hues.g, ceil_ns_biases.g)) +
-				 ((south_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ns_hues.b, ceil_ns_biases.b)) +
-				 ((south_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ns_hues.a, ceil_ns_biases.a)) +
-				 ((east_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ew_hues.r, ceil_ew_biases.r)) +
-				 ((east_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ew_hues.g, ceil_ew_biases.g)) +
-				 ((west_face * fceiling_mesh * top_vert) * hue2rgb(ceil_ew_hues.b, ceil_ew_biases.b)) +
-				 ((west_face * fceiling_mesh * bottom_vert) * hue2rgb(ceil_ew_hues.a, ceil_ew_biases.a))) *
-				(1.0 - (world_pos.y / (max_depth + 1.0)));
-*/
 	ivec2 tex_size = textureSize(albedo_texture, 0);
 	vec4 mesh_face_heights = texelFetch(face_heights, map_pos, 0);
 	vec4 mesh_face_offsets = texelFetch(face_offsets, map_pos, 0);
@@ -181,16 +161,96 @@ void vertex() {
 	vec2 uv_scale = vec2(1.0, float(tex_size.y / tex_size.x));
 	vec2 floor_bottom_offset = vec2(0.0, bottom_vert * (mesh_face_heights.b - mesh_face_heights.a));
 	vec2 ceiling_top_offset = vec2(0.0, top_vert * (mesh_face_heights.r - mesh_face_heights.g));
-	UV = (top_face * (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.r)) / uv_scale)) +
-		 (bottom_face * (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.g)) / uv_scale)) +
-		 ((north_face * ffloor_mesh) * (((vec2(tvertex.x, -tvertex.y) + 0.5) + vec2(0.0, floor_tex_offsets.r) + floor_bottom_offset) / uv_scale)) +
-		 ((east_face * ffloor_mesh) * (((vec2(tvertex.z, -tvertex.y) + 0.5) + vec2(0.0, floor_tex_offsets.g) + floor_bottom_offset) / uv_scale)) +
-		 ((south_face * ffloor_mesh) * (((-tvertex.xy + 0.5) + vec2(0.0, floor_tex_offsets.b) + floor_bottom_offset) / uv_scale)) +
-		 ((west_face * ffloor_mesh) * (((-tvertex.zy + 0.5) + vec2(0.0, floor_tex_offsets.a) + floor_bottom_offset) / uv_scale)) +
-		 ((north_face * fceiling_mesh) * (((vec2(tvertex.x, -tvertex.y) + 0.5) + vec2(0.0, ceiling_tex_offsets.r) - ceiling_top_offset) / uv_scale)) +
-		 ((east_face * fceiling_mesh) * (((vec2(tvertex.z, -tvertex.y) + 0.5) + vec2(0.0, ceiling_tex_offsets.g) - ceiling_top_offset) / uv_scale)) +
-		 ((south_face * fceiling_mesh) * (((-tvertex.xy + 0.5) + vec2(0.0, ceiling_tex_offsets.b) - ceiling_top_offset) / uv_scale)) +
-		 ((west_face * fceiling_mesh) * (((-tvertex.zy + 0.5) + vec2(0.0, ceiling_tex_offsets.a) - ceiling_top_offset) / uv_scale));
+
+	if(NORMAL.y > 0.1) { // top face
+		UV = (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.r)) / uv_scale);
+	} else if(NORMAL.y < -0.1) { // bottom face
+		UV = (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.g)) / uv_scale);
+	} else if(ceiling_mesh > 0) {
+		if(tnormal.z > 0.1) { // north face
+			if(VERTEX.y > 0.0) { // top vert
+				UV = vec2(tvertex.x + 0.5,
+						  ceiling_tex_offsets.r - (mesh_face_heights.r - mesh_face_heights.g)) /
+					 uv_scale;
+			} else { // bottom vert
+				UV = vec2(tvertex.x + 0.5,
+						  ceiling_tex_offsets.r) /
+					 uv_scale;
+			}
+		} else if(tnormal.x < -0.1) { // east face
+			if(VERTEX.y > 0.0) { // top vert
+				UV = vec2(tvertex.z + 0.5,
+						  ceiling_tex_offsets.g - (mesh_face_heights.r - mesh_face_heights.g)) /
+					 uv_scale;
+			} else { // bottom vert
+				UV = vec2(tvertex.z + 0.5,
+						  ceiling_tex_offsets.g) /
+					 uv_scale;
+			}
+		} else if(tnormal.z < -0.1) { // south face
+			if(VERTEX.y > 0.0) { // top vert
+				UV = vec2(-tvertex.x + 0.5,
+						  ceiling_tex_offsets.b - (mesh_face_heights.r - mesh_face_heights.g)) /
+					 uv_scale;
+			} else { // bottom vert
+				UV = vec2(-tvertex.x + 0.5,
+						  ceiling_tex_offsets.b) /
+					 uv_scale;
+			}
+		} else { // west face
+			if(VERTEX.y > 0.0) { // top vert
+				UV = vec2(-tvertex.z + 0.5,
+						  ceiling_tex_offsets.a - (mesh_face_heights.r - mesh_face_heights.g)) /
+					 uv_scale;
+			} else { // bottom vert
+				UV = vec2(-tvertex.z + 0.5,
+						  ceiling_tex_offsets.a) /
+					 uv_scale;
+			}
+		}
+	} else { // floor mesh
+		if(tnormal.z > 0.1) { // north face
+			if(VERTEX.y > 0.0) { // top vert
+				UV = vec2(tvertex.x + 0.5,
+						  floor_tex_offsets.r) /
+					 uv_scale;
+			} else { // bottom vert
+				UV = vec2(tvertex.x + 0.5,
+						  floor_tex_offsets.r + (mesh_face_heights.b - mesh_face_heights.a)) /
+					 uv_scale;
+			}
+		} else if(tnormal.x < -0.1) { // east face
+			if(VERTEX.y > 0.0) { // top vert
+				UV = vec2(tvertex.z + 0.5,
+						  floor_tex_offsets.g) /
+					 uv_scale;
+			} else { // bottom vert
+				UV = vec2(tvertex.z + 0.5,
+						  floor_tex_offsets.g + (mesh_face_heights.b - mesh_face_heights.a)) /
+					 uv_scale;
+			}
+		} else if(tnormal.z < -0.1) { // south face
+			if(VERTEX.y > 0.0) { // top vert
+				UV = vec2(-tvertex.x + 0.5,
+						  floor_tex_offsets.b) /
+					 uv_scale;
+			} else { // bottom vert
+				UV = vec2(-tvertex.x + 0.5,
+						  floor_tex_offsets.b + (mesh_face_heights.b - mesh_face_heights.a)) /
+					 uv_scale;
+			}
+		} else { // west face
+			if(VERTEX.y > 0.0) { // top vert
+				UV = vec2(-tvertex.z + 0.5,
+						  floor_tex_offsets.a) /
+					 uv_scale;
+			} else { // bottom vert
+				UV = vec2(-tvertex.z + 0.5,
+						  floor_tex_offsets.a + (mesh_face_heights.b - mesh_face_heights.a)) /
+					 uv_scale;
+			}
+		}
+	}
 
 	VERTEX.y = ((top_vert * fceiling_mesh) * mesh_face_heights.r) +
 			   ((bottom_vert * fceiling_mesh) * mesh_face_heights.g) +

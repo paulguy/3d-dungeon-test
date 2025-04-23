@@ -15,6 +15,7 @@ shader_parameter/count = 0
 shader_parameter/view_pos = Vector2i(0, 0)
 shader_parameter/mesh_transform = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
 shader_parameter/view_height_bias = 0.0
+shader_parameter/lookup_tex_width = 0
 
 [sub_resource type="BoxMesh" id="BoxMesh_a0tk4"]
 material = SubResource("ShaderMaterial_a0tk4")
@@ -29,11 +30,6 @@ ambient_light_color = Color(1, 1, 1, 1)
 
 [node name="Terrain Map" type="Node3D"]
 script = ExtResource("1_h3lwu")
-
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0, 0, 0)
-keep_aspect = 0
-current = true
 
 [node name="Ground Plane" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -10, 5)
@@ -51,13 +47,3 @@ script = ExtResource("3_ifrxc")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_a202f")
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
-visible = false
-sky_mode = 1
-
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
-
-[node name="Sprite2D" type="Sprite2D" parent="CanvasLayer"]
-position = Vector2(604, 38)

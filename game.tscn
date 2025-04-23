@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3 uid="uid://ckiyvlctwll6l"]
+
+[ext_resource type="Script" uid="uid://pu43yftegvrk" path="res://game.gd" id="1_e2o6t"]
+[ext_resource type="PackedScene" uid="uid://cwfcgw2p0mu4i" path="res://terrain map.tscn" id="2_feb5d"]
+
+[node name="game" type="Node3D"]
+script = ExtResource("1_e2o6t")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 0)
+keep_aspect = 0
+current = true
+
+[node name="Terrain Map" parent="." instance=ExtResource("2_feb5d")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Status" type="Label" parent="HUD"]
+offset_right = 40.0
+offset_bottom = 23.0
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 24
