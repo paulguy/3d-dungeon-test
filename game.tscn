@@ -1,10 +1,17 @@
-[gd_scene load_steps=3 format=3 uid="uid://ckiyvlctwll6l"]
+[gd_scene load_steps=4 format=3 uid="uid://ckiyvlctwll6l"]
 
 [ext_resource type="Script" uid="uid://pu43yftegvrk" path="res://game.gd" id="1_e2o6t"]
 [ext_resource type="PackedScene" uid="uid://cwfcgw2p0mu4i" path="res://terrain map.tscn" id="2_feb5d"]
 
+[sub_resource type="Environment" id="Environment_e2o6t"]
+background_mode = 1
+ambient_light_color = Color(1, 1, 1, 1)
+
 [node name="game" type="Node3D"]
 script = ExtResource("1_e2o6t")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_e2o6t")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 0)

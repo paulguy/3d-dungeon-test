@@ -9,6 +9,8 @@ uniform sampler2D map_positions; // Coordinate offsets for looking up data in te
 uniform mat3 mesh_transform;
 uniform float view_height_bias;
 uniform int lookup_tex_width;
+uniform float fog_power;
+uniform vec3 fog_color;
 
 // r - ceiling top
 // g - ceiling bottom
@@ -151,7 +153,9 @@ void vertex() {
 		}
 	}
 
-	COLOR.rgb *= pow(1.0 - (-world_pos.y / (max_depth + 1.0)), 2.0);
+	float fog_ratio = pow(-world_pos.y / (max_depth + 1.0), fog_power);
+
+	COLOR.rgb *= (COLOR.rgb * (1.0 - fog_ratio)) + (fog_color * fog_ratio);
 
 	ivec2 tex_size = textureSize(albedo_texture, 0);
 	vec4 mesh_face_heights = texelFetch(face_heights, map_pos, 0);

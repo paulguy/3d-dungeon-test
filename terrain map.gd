@@ -126,7 +126,8 @@ func rescale_colors(width : int, height : int,
 			_ceiling_east_west_biases.set_pixel(x, y, c_ew_bias)
 
 func init_empty_world(width : int, height : int, fov : int,
-					  eye_height : int, max_depth : int):
+					  eye_height : int, max_depth : int,
+					  fog_power : float, fog_color : Color):
 	face_heights = Image.create_empty(width, height, false, Image.FORMAT_RGBAF)
 	face_offsets = Image.create_empty(width, height, false, Image.FORMAT_RGBAF)
 	face_hues_and_biases = Image.create_empty(width, height, false, Image.FORMAT_RGBAF)
@@ -156,6 +157,7 @@ func init_empty_world(width : int, height : int, fov : int,
 			   ceiling_side_texture_offsets)
 
 	terrain.set_view_parameters($'Pillar', fov, max_depth, eye_height,
+								fog_power, fog_color,
 								load("res://textures.png"),
 								face_heights,
 								face_offsets,

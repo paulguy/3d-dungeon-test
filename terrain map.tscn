@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://cwfcgw2p0mu4i"]
+[gd_scene load_steps=8 format=3 uid="uid://cwfcgw2p0mu4i"]
 
 [ext_resource type="Script" uid="uid://dbuance6pqt3y" path="res://terrain map.gd" id="1_h3lwu"]
 [ext_resource type="Shader" uid="uid://d1garwujwxrkq" path="res://terrain multimesh.gdshader" id="2_fqcd4"]
@@ -16,6 +16,8 @@ shader_parameter/view_pos = Vector2i(0, 0)
 shader_parameter/mesh_transform = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
 shader_parameter/view_height_bias = 0.0
 shader_parameter/lookup_tex_width = 0
+shader_parameter/fog_power = 0.0
+shader_parameter/fog_color = Vector3(0, 0, 0)
 
 [sub_resource type="BoxMesh" id="BoxMesh_a0tk4"]
 material = SubResource("ShaderMaterial_a0tk4")
@@ -23,10 +25,6 @@ material = SubResource("ShaderMaterial_a0tk4")
 [sub_resource type="MultiMesh" id="MultiMesh_r3fl7"]
 transform_format = 1
 mesh = SubResource("BoxMesh_a0tk4")
-
-[sub_resource type="Environment" id="Environment_a202f"]
-background_mode = 1
-ambient_light_color = Color(1, 1, 1, 1)
 
 [node name="Terrain Map" type="Node3D"]
 script = ExtResource("1_h3lwu")
@@ -44,6 +42,3 @@ mesh = SubResource("BoxMesh_a0tk4")
 cast_shadow = 0
 multimesh = SubResource("MultiMesh_r3fl7")
 script = ExtResource("3_ifrxc")
-
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_a202f")

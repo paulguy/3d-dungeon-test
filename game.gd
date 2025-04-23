@@ -3,12 +3,14 @@ extends Node3D
 @onready var terrain : Node3D = $'Terrain Map'
 @onready var status : Label = $'HUD/Status'
 
-const VIEW_DEPTH : int = 49
-const EYE_HEIGHT : float = 0.5
-const WORLD_WIDTH : int = 128
-const WORLD_HEIGHT : int = 128
+var view_depth : int = 49
+var eye_height : float = 0.5
+var world_width : int = 128
+var world_height : int = 128
+var fog_power : float = 0.2
+var fog_color : Color = Color(1.0, 0.0, 0.0)
 
-var pos : Vector2i = Vector2i(WORLD_WIDTH / 2, WORLD_HEIGHT / 2)
+var pos : Vector2i = Vector2i(world_width / 2, world_height / 2)
 var dir : int = 0
 
 # ceiling, floor
@@ -319,8 +321,10 @@ func change_parameter(amount : float):
 											terrain.change_floor_east_offset(p, amount)
 
 func _ready():
-	terrain.init_empty_world(WORLD_WIDTH, WORLD_HEIGHT,
-							 $'Camera3D'.fov, EYE_HEIGHT, VIEW_DEPTH)
+	$'WorldEnvironment'.environment.background_color = fog_color
+	terrain.init_empty_world(world_width, world_height,
+							 $'Camera3D'.fov, eye_height, view_depth,
+							 fog_power, fog_color)
 	terrain.set_pos(pos)
 	terrain.set_dir(dir)
 	update_status()

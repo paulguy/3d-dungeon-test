@@ -32,6 +32,7 @@ var transform_west : Basis = Basis(Vector3(0.0, 1.0, 0.0), PI * 1.5)
 var depth_counts : Array[int] = Array([], TYPE_INT, "", null)
 
 func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int, eye_height : float,
+						 fog_power : float, fog_color : Color,
 						 texture : CompressedTexture2D, face_heights : Image,
 						 face_offsets : Image, face_hues_and_biases : Image,
 						 floor_north_south_hues : Image, floor_north_south_biases : Image,
@@ -87,6 +88,8 @@ func set_view_parameters(mesh : MeshInstance3D, fov : float, depth : int, eye_he
 	_mesh.mesh.material.set_shader_parameter(&'count', count)
 	_mesh.mesh.material.set_shader_parameter(&'view_height_bias', eye_height)
 	_mesh.mesh.material.set_shader_parameter(&'lookup_tex_width', LOOKUP_TEX_WIDTH)
+	_mesh.mesh.material.set_shader_parameter(&'fog_power', fog_power)
+	_mesh.mesh.material.set_shader_parameter(&'fog_color', fog_color)
 
 	multimesh.instance_count = len(positions) * 2
 	for i in len(positions):
@@ -193,3 +196,9 @@ func set_depth(depth : float):
 	depth = min(depth, max_depth)
 	_mesh.mesh.material.set_shader_parameter(&'max_depth', depth)
 	_mesh.mesh.material.set_shader_parameter(&'count', depth_counts[depth])
+
+func set_fog_power(val : float):
+	_mesh.mesh.material.set_shader_parameter(&'fog_power', val)
+
+func set_fog_color(val : Color):
+	_mesh.mesh.material.set_shader_parameter(&'fog_color', val)
