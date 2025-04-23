@@ -653,3 +653,567 @@ func change_ceiling_west_offset(pos : Vector2i, val : float):
 	ceiling_side_texture_offsets.set_pixelv(pos, col)
 	terrain.update(null, null, null, null, null, null, null, null, null, null, null, null,
 				   ceiling_side_texture_offsets)
+
+func set_ceiling_top_height(pos : Vector2i, val : float):
+	var col : Color = face_heights.get_pixelv(pos)
+	col.r = val
+	face_heights.set_pixelv(pos, col)
+	terrain.update(face_heights,
+				   null, null, null, null, null, null, null, null, null, null, null, null)
+
+func set_ceiling_bottom_height(pos : Vector2i, val : float):
+	var col : Color = face_heights.get_pixelv(pos)
+	col.g = val
+	face_heights.set_pixelv(pos, col)
+	terrain.update(face_heights,
+				   null, null, null, null, null, null, null, null, null, null, null, null)
+
+func set_floor_top_height(pos : Vector2i, val : float):
+	var col : Color = face_heights.get_pixelv(pos)
+	col.b = val
+	face_heights.set_pixelv(pos, col)
+	terrain.update(face_heights,
+				   null, null, null, null, null, null, null, null, null, null, null, null)
+
+func set_floor_bottom_height(pos : Vector2i, val : float):
+	var col : Color = face_heights.get_pixelv(pos)
+	col.a = val
+	face_heights.set_pixelv(pos, col)
+	terrain.update(face_heights,
+				   null, null, null, null, null, null, null, null, null, null, null, null)
+
+func set_ceiling_top_offset(pos : Vector2i, val : float):
+	var col : Color = face_offsets.get_pixelv(pos)
+	col.r = val
+	face_offsets.set_pixelv(pos, col)
+	terrain.update(null,
+				   face_offsets,
+				   null, null, null, null, null, null, null, null, null, null, null)
+
+func set_ceiling_bottom_offset(pos : Vector2i, val : float):
+	var col : Color = face_offsets.get_pixelv(pos)
+	col.g = val
+	face_offsets.set_pixelv(pos, col)
+	terrain.update(null,
+				   face_offsets,
+				   null, null, null, null, null, null, null, null, null, null, null)
+
+func set_floor_top_offset(pos : Vector2i, val : float):
+	var col : Color = face_offsets.get_pixelv(pos)
+	col.b = val
+	face_offsets.set_pixelv(pos, col)
+	terrain.update(null,
+				   face_offsets,
+				   null, null, null, null, null, null, null, null, null, null, null)
+
+func set_floor_bottom_offset(pos : Vector2i, val : float):
+	var col : Color = face_offsets.get_pixelv(pos)
+	col.a = val
+	face_offsets.set_pixelv(pos, col)
+	terrain.update(null,
+				   face_offsets,
+				   null, null, null, null, null, null, null, null, null, null, null)
+
+func set_top_hue(pos : Vector2i, val : float):
+	var col : Color = face_hues_and_biases.get_pixelv(pos)
+	col.r = val
+	face_hues_and_biases.set_pixelv(pos, col)
+	terrain.update(null, null,
+				   face_hues_and_biases,
+				   null, null, null, null, null, null, null, null, null, null)
+
+func set_top_bias(pos : Vector2i, val : float):
+	var col : Color = face_hues_and_biases.get_pixelv(pos)
+	col.g = val
+	face_hues_and_biases.set_pixelv(pos, col)
+	terrain.update(null, null,
+				   face_hues_and_biases,
+				   null, null, null, null, null, null, null, null, null, null)
+
+func set_bottom_hue(pos : Vector2i, val : float):
+	var col : Color = face_hues_and_biases.get_pixelv(pos)
+	col.b = val
+	face_hues_and_biases.set_pixelv(pos, col)
+	terrain.update(null, null,
+				   face_hues_and_biases,
+				   null, null, null, null, null, null, null, null, null, null)
+
+func set_bottom_bias(pos : Vector2i, val : float):
+	var col : Color = face_hues_and_biases.get_pixelv(pos)
+	col.a = val
+	face_hues_and_biases.set_pixelv(pos, col)
+	terrain.update(null, null,
+				   face_hues_and_biases,
+				   null, null, null, null, null, null, null, null, null, null)
+
+func set_floor_north_top_hue(pos : Vector2i, val : float):
+	var col : Color = floor_north_south_hues.get_pixelv(pos)
+	col.r = val
+	floor_north_south_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null,
+				   floor_north_south_hues,
+				   null, null, null, null, null, null, null, null, null)
+
+func set_floor_north_bottom_hue(pos : Vector2i, val : float):
+	var col : Color = floor_north_south_hues.get_pixelv(pos)
+	col.g = val
+	floor_north_south_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null,
+				   floor_north_south_hues,
+				   null, null, null, null, null, null, null, null, null)
+
+func set_floor_south_top_hue(pos : Vector2i, val : float):
+	var col : Color = floor_north_south_hues.get_pixelv(pos)
+	col.b = val
+	floor_north_south_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null,
+				   floor_north_south_hues,
+				   null, null, null, null, null, null, null, null, null)
+
+func set_floor_south_bottom_hue(pos : Vector2i, val : float):
+	var col : Color = floor_north_south_hues.get_pixelv(pos)
+	col.a = val
+	floor_north_south_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null,
+				   floor_north_south_hues,
+				   null, null, null, null, null, null, null, null, null)
+
+func set_floor_north_top_bias(pos : Vector2i, val : float):
+	var col : Color = floor_north_south_biases.get_pixelv(pos)
+	col.r = val
+	floor_north_south_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null,
+				   floor_north_south_biases,
+				   null, null, null, null, null, null, null, null)
+
+func set_floor_north_bottom_bias(pos : Vector2i, val : float):
+	var col : Color = floor_north_south_biases.get_pixelv(pos)
+	col.g = val
+	floor_north_south_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null,
+				   floor_north_south_biases,
+				   null, null, null, null, null, null, null, null)
+
+func set_floor_south_top_bias(pos : Vector2i, val : float):
+	var col : Color = floor_north_south_biases.get_pixelv(pos)
+	col.b = val
+	floor_north_south_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null,
+				   floor_north_south_biases,
+				   null, null, null, null, null, null, null, null)
+
+func set_floor_south_bottom_bias(pos : Vector2i, val : float):
+	var col : Color = floor_north_south_biases.get_pixelv(pos)
+	col.a = val
+	floor_north_south_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null,
+				   floor_north_south_biases,
+				   null, null, null, null, null, null, null, null)
+
+func set_floor_east_top_hue(pos : Vector2i, val : float):
+	var col : Color = floor_east_west_hues.get_pixelv(pos)
+	col.r = val
+	floor_east_west_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null,
+				   floor_east_west_hues,
+				   null, null, null, null, null, null, null)
+
+func set_floor_east_bottom_hue(pos : Vector2i, val : float):
+	var col : Color = floor_east_west_hues.get_pixelv(pos)
+	col.g = val
+	floor_east_west_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null,
+				   floor_east_west_hues,
+				   null, null, null, null, null, null, null)
+
+func set_floor_west_top_hue(pos : Vector2i, val : float):
+	var col : Color = floor_east_west_hues.get_pixelv(pos)
+	col.b = val
+	floor_east_west_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null,
+				   floor_east_west_hues,
+				   null, null, null, null, null, null, null)
+
+func set_floor_west_bottom_hue(pos : Vector2i, val : float):
+	var col : Color = floor_east_west_hues.get_pixelv(pos)
+	col.a = val
+	floor_east_west_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null,
+				   floor_east_west_hues,
+				   null, null, null, null, null, null, null)
+
+func set_floor_east_top_bias(pos : Vector2i, val : float):
+	var col : Color = floor_east_west_biases.get_pixelv(pos)
+	col.r = val
+	floor_east_west_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null,
+				   floor_east_west_biases,
+				   null, null, null, null, null, null)
+
+func set_floor_east_bottom_bias(pos : Vector2i, val : float):
+	var col : Color = floor_east_west_biases.get_pixelv(pos)
+	col.g = val
+	floor_east_west_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null,
+				   floor_east_west_biases,
+				   null, null, null, null, null, null)
+
+func set_floor_west_top_bias(pos : Vector2i, val : float):
+	var col : Color = floor_east_west_biases.get_pixelv(pos)
+	col.b = val
+	floor_east_west_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null,
+				   floor_east_west_biases,
+				   null, null, null, null, null, null)
+
+func set_floor_west_bottom_bias(pos : Vector2i, val : float):
+	var col : Color = floor_east_west_biases.get_pixelv(pos)
+	col.a = val
+	floor_east_west_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null,
+				   floor_east_west_biases,
+				   null, null, null, null, null, null)
+
+func set_floor_north_offset(pos : Vector2i, val : float):
+	var col : Color = floor_side_texture_offsets.get_pixelv(pos)
+	col.r = val
+	floor_side_texture_offsets.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null,
+				   floor_side_texture_offsets,
+				   null, null, null, null, null)
+
+func set_floor_east_offset(pos : Vector2i, val : float):
+	var col : Color = floor_side_texture_offsets.get_pixelv(pos)
+	col.g = val
+	floor_side_texture_offsets.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null,
+				   floor_side_texture_offsets,
+				   null, null, null, null, null)
+
+func set_floor_south_offset(pos : Vector2i, val : float):
+	var col : Color = floor_side_texture_offsets.get_pixelv(pos)
+	col.b = val
+	floor_side_texture_offsets.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null,
+				   floor_side_texture_offsets,
+				   null, null, null, null, null)
+
+func set_floor_west_offset(pos : Vector2i, val : float):
+	var col : Color = floor_side_texture_offsets.get_pixelv(pos)
+	col.a = val
+	floor_side_texture_offsets.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null,
+				   floor_side_texture_offsets,
+				   null, null, null, null, null)
+
+func set_ceiling_north_top_hue(pos : Vector2i, val : float):
+	var col : Color = ceiling_north_south_hues.get_pixelv(pos)
+	col.r = val
+	ceiling_north_south_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null,
+				   ceiling_north_south_hues,
+				   null, null, null, null)
+
+func set_ceiling_north_bottom_hue(pos : Vector2i, val : float):
+	var col : Color = ceiling_north_south_hues.get_pixelv(pos)
+	col.g = val
+	ceiling_north_south_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null,
+				   ceiling_north_south_hues,
+				   null, null, null, null)
+
+func set_ceiling_south_top_hue(pos : Vector2i, val : float):
+	var col : Color = ceiling_north_south_hues.get_pixelv(pos)
+	col.b = val
+	ceiling_north_south_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null,
+				   ceiling_north_south_hues,
+				   null, null, null, null)
+
+func set_ceiling_south_bottom_hue(pos : Vector2i, val : float):
+	var col : Color = ceiling_north_south_hues.get_pixelv(pos)
+	col.a = val
+	ceiling_north_south_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null,
+				   ceiling_north_south_hues,
+				   null, null, null, null)
+
+func set_ceiling_north_top_bias(pos : Vector2i, val : float):
+	var col : Color = ceiling_north_south_biases.get_pixelv(pos)
+	col.r = val
+	ceiling_north_south_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null,
+				   ceiling_north_south_biases,
+				   null, null, null)
+
+func set_ceiling_north_bottom_bias(pos : Vector2i, val : float):
+	var col : Color = ceiling_north_south_biases.get_pixelv(pos)
+	col.g = val
+	ceiling_north_south_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null,
+				   ceiling_north_south_biases,
+				   null, null, null)
+
+func set_ceiling_south_top_bias(pos : Vector2i, val : float):
+	var col : Color = ceiling_north_south_biases.get_pixelv(pos)
+	col.b = val
+	ceiling_north_south_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null,
+				   ceiling_north_south_biases,
+				   null, null, null)
+
+func set_ceiling_south_bottom_bias(pos : Vector2i, val : float):
+	var col : Color = ceiling_north_south_biases.get_pixelv(pos)
+	col.a = val
+	ceiling_north_south_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null,
+				   ceiling_north_south_biases,
+				   null, null, null)
+
+func set_ceiling_east_top_hue(pos : Vector2i, val : float):
+	var col : Color = ceiling_east_west_hues.get_pixelv(pos)
+	col.r = val
+	ceiling_east_west_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null,
+				   ceiling_east_west_hues,
+				   null, null)
+
+func set_ceiling_east_bottom_hue(pos : Vector2i, val : float):
+	var col : Color = ceiling_east_west_hues.get_pixelv(pos)
+	col.g = val
+	ceiling_east_west_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null,
+				   ceiling_east_west_hues,
+				   null, null)
+
+func set_ceiling_west_top_hue(pos : Vector2i, val : float):
+	var col : Color = ceiling_east_west_hues.get_pixelv(pos)
+	col.b = val
+	ceiling_east_west_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null,
+				   ceiling_east_west_hues,
+				   null, null)
+
+func set_ceiling_west_bottom_hue(pos : Vector2i, val : float):
+	var col : Color = ceiling_east_west_hues.get_pixelv(pos)
+	col.a = val
+	ceiling_east_west_hues.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null,
+				   ceiling_east_west_hues,
+				   null, null)
+
+func set_ceiling_east_top_bias(pos : Vector2i, val : float):
+	var col : Color = ceiling_east_west_biases.get_pixelv(pos)
+	col.r = val
+	ceiling_east_west_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null, null,
+				   ceiling_east_west_biases,
+				   null)
+
+func set_ceiling_east_bottom_bias(pos : Vector2i, val : float):
+	var col : Color = ceiling_east_west_biases.get_pixelv(pos)
+	col.g = val
+	ceiling_east_west_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null, null,
+				   ceiling_east_west_biases,
+				   null)
+
+func set_ceiling_west_top_bias(pos : Vector2i, val : float):
+	var col : Color = ceiling_east_west_biases.get_pixelv(pos)
+	col.b = val
+	ceiling_east_west_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null, null,
+				   ceiling_east_west_biases,
+				   null)
+
+func set_ceiling_west_bottom_bias(pos : Vector2i, val : float):
+	var col : Color = ceiling_east_west_biases.get_pixelv(pos)
+	col.a = val
+	ceiling_east_west_biases.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null, null,
+				   ceiling_east_west_biases,
+				   null)
+
+func set_ceiling_north_offset(pos : Vector2i, val : float):
+	var col : Color = ceiling_side_texture_offsets.get_pixelv(pos)
+	col.r = val
+	ceiling_side_texture_offsets.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null, null, null,
+				   ceiling_side_texture_offsets)
+
+func set_ceiling_east_offset(pos : Vector2i, val : float):
+	var col : Color = ceiling_side_texture_offsets.get_pixelv(pos)
+	col.g = val
+	ceiling_side_texture_offsets.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null, null, null,
+				   ceiling_side_texture_offsets)
+
+func set_ceiling_south_offset(pos : Vector2i, val : float):
+	var col : Color = ceiling_side_texture_offsets.get_pixelv(pos)
+	col.b = val
+	ceiling_side_texture_offsets.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null, null, null,
+				   ceiling_side_texture_offsets)
+
+func set_ceiling_west_offset(pos : Vector2i, val : float):
+	var col : Color = ceiling_side_texture_offsets.get_pixelv(pos)
+	col.a = val
+	ceiling_side_texture_offsets.set_pixelv(pos, col)
+	terrain.update(null, null, null, null, null, null, null, null, null, null, null, null,
+				   ceiling_side_texture_offsets)
+
+func get_ceiling_top_height(pos : Vector2i) -> float:
+	return face_heights.get_pixelv(pos).r
+
+func get_ceiling_bottom_height(pos : Vector2i) -> float:
+	return face_heights.get_pixelv(pos).g
+
+func get_floor_top_height(pos : Vector2i) -> float:
+	return face_heights.get_pixelv(pos).b
+
+func get_floor_bottom_height(pos : Vector2i) -> float:
+	return face_heights.get_pixelv(pos).a
+
+func get_ceiling_top_offset(pos : Vector2i) -> float:
+	return face_offsets.get_pixelv(pos).r
+
+func get_ceiling_bottom_offset(pos : Vector2i) -> float:
+	return face_offsets.get_pixelv(pos).g
+
+func get_floor_top_offset(pos : Vector2i) -> float:
+	return face_offsets.get_pixelv(pos).b
+
+func get_floor_bottom_offset(pos : Vector2i) -> float:
+	return face_offsets.get_pixelv(pos).a
+
+func get_top_hue(pos : Vector2i) -> float:
+	return face_hues_and_biases.get_pixelv(pos).r
+
+func get_top_bias(pos : Vector2i) -> float:
+	return face_hues_and_biases.get_pixelv(pos).g
+
+func get_bottom_hue(pos : Vector2i) -> float:
+	return face_hues_and_biases.get_pixelv(pos).b
+
+func get_bottom_bias(pos : Vector2i) -> float:
+	return face_hues_and_biases.get_pixelv(pos).a
+
+func get_floor_north_top_hue(pos : Vector2i) -> float:
+	return floor_north_south_hues.get_pixelv(pos).r
+
+func get_floor_north_bottom_hue(pos : Vector2i) -> float:
+	return floor_north_south_hues.get_pixelv(pos).g
+
+func get_floor_south_top_hue(pos : Vector2i) -> float:
+	return floor_north_south_hues.get_pixelv(pos).b
+
+func get_floor_south_bottom_hue(pos : Vector2i) -> float:
+	return floor_north_south_hues.get_pixelv(pos).a
+
+func get_floor_north_top_bias(pos : Vector2i) -> float:
+	return floor_north_south_biases.get_pixelv(pos).r
+
+func get_floor_north_bottom_bias(pos : Vector2i) -> float:
+	return floor_north_south_biases.get_pixelv(pos).g
+
+func get_floor_south_top_bias(pos : Vector2i) -> float:
+	return floor_north_south_biases.get_pixelv(pos).b
+
+func get_floor_south_bottom_bias(pos : Vector2i) -> float:
+	return floor_north_south_biases.get_pixelv(pos).a
+
+func get_floor_east_top_hue(pos : Vector2i) -> float:
+	return floor_east_west_hues.get_pixelv(pos).r
+
+func get_floor_east_bottom_hue(pos : Vector2i) -> float:
+	return floor_east_west_hues.get_pixelv(pos).g
+
+func get_floor_west_top_hue(pos : Vector2i) -> float:
+	return floor_east_west_hues.get_pixelv(pos).b
+
+func get_floor_west_bottom_hue(pos : Vector2i) -> float:
+	return floor_east_west_hues.get_pixelv(pos).a
+
+func get_floor_east_top_bias(pos : Vector2i) -> float:
+	return floor_east_west_biases.get_pixelv(pos).r
+
+func get_floor_east_bottom_bias(pos : Vector2i) -> float:
+	return floor_east_west_biases.get_pixelv(pos).g
+
+func get_floor_west_top_bias(pos : Vector2i) -> float:
+	return floor_east_west_biases.get_pixelv(pos).b
+
+func get_floor_west_bottom_bias(pos : Vector2i) -> float:
+	return floor_east_west_biases.get_pixelv(pos).a
+
+func get_floor_north_offset(pos : Vector2i) -> float:
+	return floor_side_texture_offsets.get_pixelv(pos).r
+
+func get_floor_east_offset(pos : Vector2i) -> float:
+	return floor_side_texture_offsets.get_pixelv(pos).g
+
+func get_floor_south_offset(pos : Vector2i) -> float:
+	return floor_side_texture_offsets.get_pixelv(pos).b
+
+func get_floor_west_offset(pos : Vector2i) -> float:
+	return floor_side_texture_offsets.get_pixelv(pos).a
+
+func get_ceiling_north_top_hue(pos : Vector2i) -> float:
+	return ceiling_north_south_hues.get_pixelv(pos).r
+
+func get_ceiling_north_bottom_hue(pos : Vector2i) -> float:
+	return ceiling_north_south_hues.get_pixelv(pos).g
+
+func get_ceiling_south_top_hue(pos : Vector2i) -> float:
+	return ceiling_north_south_hues.get_pixelv(pos).b
+
+func get_ceiling_south_bottom_hue(pos : Vector2i) -> float:
+	return ceiling_north_south_hues.get_pixelv(pos).a
+
+func get_ceiling_north_top_bias(pos : Vector2i) -> float:
+	return ceiling_north_south_biases.get_pixelv(pos).r
+
+func get_ceiling_north_bottom_bias(pos : Vector2i) -> float:
+	return ceiling_north_south_biases.get_pixelv(pos).g
+
+func get_ceiling_south_top_bias(pos : Vector2i) -> float:
+	return ceiling_north_south_biases.get_pixelv(pos).b
+
+func get_ceiling_south_bottom_bias(pos : Vector2i) -> float:
+	return ceiling_north_south_biases.get_pixelv(pos).a
+
+func get_ceiling_east_top_hue(pos : Vector2i) -> float:
+	return ceiling_east_west_hues.get_pixelv(pos).r
+
+func get_ceiling_east_bottom_hue(pos : Vector2i) -> float:
+	return ceiling_east_west_hues.get_pixelv(pos).g
+
+func get_ceiling_west_top_hue(pos : Vector2i) -> float:
+	return ceiling_east_west_hues.get_pixelv(pos).b
+
+func get_ceiling_west_bottom_hue(pos : Vector2i) -> float:
+	return ceiling_east_west_hues.get_pixelv(pos).a
+
+func get_ceiling_east_top_bias(pos : Vector2i) -> float:
+	return ceiling_east_west_biases.get_pixelv(pos).r
+
+func get_ceiling_east_bottom_bias(pos : Vector2i) -> float:
+	return ceiling_east_west_biases.get_pixelv(pos).g
+
+func get_ceiling_west_top_bias(pos : Vector2i) -> float:
+	return ceiling_east_west_biases.get_pixelv(pos).b
+
+func get_ceiling_west_bottom_bias(pos : Vector2i) -> float:
+	return ceiling_east_west_biases.get_pixelv(pos).a
+
+func get_ceiling_north_offset(pos : Vector2i) -> float:
+	return ceiling_side_texture_offsets.get_pixelv(pos).r
+
+func get_ceiling_east_offset(pos : Vector2i) -> float:
+	return ceiling_side_texture_offsets.get_pixelv(pos).g
+
+func get_ceiling_south_offset(pos : Vector2i) -> float:
+	return ceiling_side_texture_offsets.get_pixelv(pos).b
+
+func get_ceiling_west_offset(pos : Vector2i) -> float:
+	return ceiling_side_texture_offsets.get_pixelv(pos).a

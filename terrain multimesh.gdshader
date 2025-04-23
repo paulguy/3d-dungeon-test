@@ -166,12 +166,12 @@ void vertex() {
 	vec2 floor_bottom_offset = vec2(0.0, bottom_vert * (mesh_face_heights.b - mesh_face_heights.a));
 	vec2 ceiling_top_offset = vec2(0.0, top_vert * (mesh_face_heights.r - mesh_face_heights.g));
 
-	if(NORMAL.y > 0.1) { // top face
-		UV = (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.r)) / uv_scale);
-	} else if(NORMAL.y < -0.1) { // bottom face
-		UV = (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.g)) / uv_scale);
-	} else if(ceiling_mesh > 0) {
-		if(tnormal.z > 0.1) { // north face
+	if(ceiling_mesh > 0) {
+		if(NORMAL.y > 0.1) { // top face
+			UV = (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.r)) / uv_scale);
+		} else if(NORMAL.y < -0.1) { // bottom face
+			UV = (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.g)) / uv_scale);
+		} else if(tnormal.z > 0.1) { // north face
 			if(VERTEX.y > 0.0) { // top vert
 				UV = vec2(tvertex.x + 0.5,
 						  ceiling_tex_offsets.r - (mesh_face_heights.r - mesh_face_heights.g)) /
@@ -213,7 +213,11 @@ void vertex() {
 			}
 		}
 	} else { // floor mesh
-		if(tnormal.z > 0.1) { // north face
+		if(NORMAL.y > 0.1) { // top face
+			UV = (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.b)) / uv_scale);
+		} else if(NORMAL.y < -0.1) { // bottom face
+			UV = (((tvertex.zx + 0.5) + vec2(0.0, mesh_face_offsets.a)) / uv_scale);
+		} else if(tnormal.z > 0.1) { // north face
 			if(VERTEX.y > 0.0) { // top vert
 				UV = vec2(tvertex.x + 0.5,
 						  floor_tex_offsets.r) /
