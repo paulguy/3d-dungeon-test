@@ -1,6 +1,21 @@
 extends Node3D
 
 const MAP_VERSION : int = 0
+const MAP_LAYERS : Array[StringName] = [
+	&'face_heights',
+	&'face_offsets',
+	&'face_hues_and_biases',
+	&'floor_side_texture_offsets',
+	&'floor_north_south_hues',
+	&'floor_north_south_biases',
+	&'floor_east_west_hues',
+	&'floor_east_west_biases',
+	&'ceiling_north_south_hues',
+	&'ceiling_north_south_biases',
+	&'ceiling_east_west_hues',
+	&'ceiling_east_west_biases',
+	&'ceiling_side_texture_offsets'
+]
 
 @onready var terrain : MultiMeshInstance3D = $'Terrain Multimesh'
 
@@ -116,19 +131,8 @@ func rescale_colors(width : int, height : int,
 
 func init_empty_world(dimensions : Vector2i):
 	dims = dimensions
-	init_clear_texture(&'face_heights')
-	init_clear_texture(&'face_offsets')
-	init_clear_texture(&'face_hues_and_biases')
-	init_clear_texture(&'floor_north_south_hues')
-	init_clear_texture(&'floor_north_south_biases')
-	init_clear_texture(&'floor_east_west_hues')
-	init_clear_texture(&'floor_east_west_biases')
-	init_clear_texture(&'floor_side_texture_offsets')
-	init_clear_texture(&'ceiling_north_south_hues')
-	init_clear_texture(&'ceiling_north_south_biases')
-	init_clear_texture(&'ceiling_east_west_hues')
-	init_clear_texture(&'ceiling_east_west_biases')
-	init_clear_texture(&'ceiling_side_texture_offsets')
+	for layer in MAP_LAYERS:
+		init_clear_texture(layer)
 
 func set_texture(texture):
 	terrain.set_texture(texture)
@@ -195,101 +199,72 @@ func save_map(mapname : String) -> Error:
 	if err != Error.OK:
 		return err
 
-	err = write_image(writer, &'face_heights')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'face_offsets')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'face_hues_and_biases')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'floor_north_south_hues')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'floor_north_south_biases')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'floor_east_west_hues')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'floor_east_west_biases')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'floor_side_texture_offsets')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'ceiling_north_south_hues')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'ceiling_north_south_biases')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'ceiling_east_west_hues')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'ceiling_east_west_biases')
-	if err != Error.OK:
-		return err
-
-	err = write_image(writer, &'ceiling_side_texture_offsets')
-	if err != Error.OK:
-		return err
+	for layer in MAP_LAYERS:
+		err = write_image(writer, layer)
+		if err != Error.OK:
+			return err
 
 	return Error.OK
 
-func load_map(mapname : String) -> Error:
+func load_layer(reader : ZIPReader, layername : String, loaded : Dictionary[StringName, Image],
+				pixelsize : int, width : int, height : int) -> Error:
+	var data : PackedByteArray = reader.read_file("%s.bin" % layername)
+
+	if len(data) / pixelsize != width * height:
+		return Error.ERR_FILE_CORRUPT
+
+	loaded[layername] = Image.create_from_data(width, height, false, Image.FORMAT_RGBAF, data)
+
+	return Error.OK
+
+func load_map(mapname : String) -> Dictionary:
+	var pixelsize : int = Image.create_empty(1, 1, false, Image.FORMAT_RGBAF).get_data_size()
+
 	var reader = ZIPReader.new()
 	var err = reader.open("user://%s.zip" % mapname)
 	if err != OK:
-		return err
+		return {&'error': err}
 
 	var info : String = reader.read_file("info.txt").get_string_from_utf8()
 
 	var version : int
 	var width : int
 	var height : int
+	var pos_x : int = -1
+	var pos_y : int = -1
+	var dir : int = -1
 
 	for line in info.split('\n', false):
 		var parts : PackedStringArray = line.split(' ', true, 1)
 		if parts[0].to_lower() == "version":
-			version = parts[0].to_int()
+			version = parts[1].to_int()
 		elif parts[0].to_lower() == "width":
-			width = parts[0].to_int()
+			width = parts[1].to_int()
 		elif parts[0].to_lower() == "height":
-			height = parts[0].to_int()
+			height = parts[1].to_int()
+		elif parts[0].to_lower() == "pos_x":
+			pos_x = parts[1].to_int()
+		elif parts[0].to_lower() == "pos_y":
+			pos_y = parts[1].to_int()
+		elif parts[0].to_lower() == "dir":
+			dir = parts[1].to_int()
 
 	if version != 0 or \
 	   (width == null or width < 1) or \
 	   (height == null or height < 1):
-		return Error.ERR_FILE_UNRECOGNIZED
+		return {&'error': Error.ERR_FILE_UNRECOGNIZED}
 
-	var _face_heights : Image
-	var _face_offsets : Image
-	var _face_hues_and_biases : Image
-	var _floor_north_south_hues : Image
-	var _floor_north_south_biases : Image
-	var _floor_east_west_hues : Image
-	var _floor_east_west_biases : Image
-	var _floor_side_texture_offsets : Image
-	var _ceiling_north_south_hues : Image
-	var _ceiling_north_south_biases : Image
-	var _ceiling_east_west_hues : Image
-	var _ceiling_east_west_biases : Image
-	var _ceiling_side_texture_offsets : Image
+	var loaded : Dictionary[StringName, Image] = {}
+	for layer in MAP_LAYERS:
+		err = load_layer(reader, layer, loaded, pixelsize, width, height)
+		if err != Error.OK:
+			return {&'error': err}
 
-	return Error.OK
+	images = loaded
+	for layer in MAP_LAYERS:
+		terrain.set_image(layer, images[layer])
+
+	return {&'error': Error.OK, &'pos_x': pos_x, &'pos_y': pos_y, &'dir': dir}
 
 # properties
 # heights
@@ -355,21 +330,10 @@ func load_map(mapname : String) -> Error:
 #  floor west top
 #  floor west bottom
 
-func get_opp_dir(dir : int):
-	match dir:
-		0: # north
-			return 2 # south
-		1: # east
-			return 3 # west
-		2: # south
-			return 0 # north
-		_: # west
-			return 1 # east
-
 func lookup_name(mesh : int, face : int, dir : int, parameter : int) -> StringName:
-	if parameter == 0: # height
+	if parameter == MapParameters.HEIGHT:
 		return &'face_heights'
-	elif parameter == 1: # hue
+	elif parameter == MapParameters.HUE:
 		if face == 0: # horiz
 			return &'face_hues_and_biases'
 		else: # vert/wall/side
@@ -383,7 +347,7 @@ func lookup_name(mesh : int, face : int, dir : int, parameter : int) -> StringNa
 					return &'floor_north_south_hues'
 				else:
 					return &'floor_east_west_hues'
-	elif parameter == 2: # bias
+	elif parameter == MapParameters.BIAS:
 		if face == 0:
 			return &'face_hues_and_biases'
 		else:
@@ -397,7 +361,7 @@ func lookup_name(mesh : int, face : int, dir : int, parameter : int) -> StringNa
 					return &'floor_north_south_biases'
 				else:
 					return &'floor_east_west_biases'
-	elif parameter == 3: # offset
+	elif parameter == MapParameters.OFFSET:
 		if face == 0:
 			return &'face_offsets'
 		else:
@@ -409,51 +373,57 @@ func lookup_name(mesh : int, face : int, dir : int, parameter : int) -> StringNa
 	return &''
 
 func lookup_offset(mesh : int, face : int, dir : int, topbottom : int, parameter : int) -> int:
-	if parameter == 0: # height
+	if parameter == MapParameters.HEIGHT:
 		return mesh * 2 + topbottom
-	elif parameter == 1: # hue
+	elif parameter == MapParameters.HUE:
 		if face == 0: # horiz
 			return mesh * 2
 		else: # vert/wall/side
 			if dir % 2 == 0: # north in 0, out 0  south in 2, out 2
-				return get_opp_dir(dir) + topbottom
+				return MapParameters.get_opp_dir(dir) + topbottom
 			else: # east in 1, out 0  west in 3 out 2
-				return get_opp_dir(dir) - 1 + topbottom
-	elif parameter == 2: # bias
+				return MapParameters.get_opp_dir(dir) - 1 + topbottom
+	elif parameter == MapParameters.BIAS:
 		if face == 0:
 			return mesh * 2 + 1
 		else:
 			if dir % 2 == 0:
-				return get_opp_dir(dir) + topbottom
+				return MapParameters.get_opp_dir(dir) + topbottom
 			else:
-				return get_opp_dir(dir) - 1 + topbottom
-	elif parameter == 3: # offset
+				return MapParameters.get_opp_dir(dir) - 1 + topbottom
+	elif parameter == MapParameters.OFFSET:
 		if face == 0:
 			return mesh * 2 + topbottom
 		else:
 			if mesh == 0:
-				return get_opp_dir(dir)
+				return MapParameters.get_opp_dir(dir)
 			else:
-				return get_opp_dir(dir)
+				return MapParameters.get_opp_dir(dir)
 
 	return -1
 
 func change(mesh : int, face : int, dir : int, topbottom : int, parameter : int,
-			pos : Vector2i, val : float):
+			val : float, pos : Vector2i, size : Vector2i = Vector2i.ZERO):
 	var imagename : StringName = lookup_name(mesh, face, dir, parameter)
 	var image : Image = images[imagename]
 	var col : Color = image.get_pixelv(pos)
 	col[lookup_offset(mesh, face, dir, topbottom, parameter)] += val
-	image.set_pixelv(pos, col)
+	if size == Vector2i.ZERO:
+		image.set_pixelv(pos, col)
+	else:
+		image.fill_rect(Rect2i(pos, size), col)
 	terrain.set_image(imagename, image)
 
 func set_val(mesh : int, face : int, dir : int, topbottom : int, parameter : int,
-			pos : Vector2i, val : float):
+			 val : float, pos : Vector2i, size : Vector2i = Vector2i.ZERO):
 	var imagename : StringName = lookup_name(mesh, face, dir, parameter)
 	var image : Image = images[imagename]
 	var col : Color = image.get_pixelv(pos)
 	col[lookup_offset(mesh, face, dir, topbottom, parameter)] = val
-	image.set_pixelv(pos, col)
+	if size == Vector2i.ZERO:
+		image.set_pixelv(pos, col)
+	else:
+		image.fill_rect(Rect2i(pos, size), col)
 	terrain.set_image(imagename, image)
 
 func get_val(mesh : int, face : int, dir : int, topbottom : int, parameter : int,

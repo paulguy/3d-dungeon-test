@@ -18,10 +18,10 @@ uniform vec3 fog_color;
 // a - floor bottom
 uniform sampler2D face_heights;
 uniform sampler2D face_offsets;
-// r = floor hue
-// g = floor bias
-// b = ceiling hue
-// a = ceiling bias
+// r = ceiling hue
+// g = ceiling bias
+// b = floor hue
+// a = floor bias
 uniform sampler2D face_hues_and_biases;
 // r - north top
 // g - north bottom
@@ -95,10 +95,10 @@ void vertex() {
 	vec4 ceil_ew_hues = texelFetch(ceiling_east_west_hues, map_pos, 0);
 	vec4 ceil_ew_biases = texelFetch(ceiling_east_west_biases, map_pos, 0);
 
-	if(NORMAL.y > 0.1) { // top face
-		COLOR.rgb = hue2rgb(face_colors.r, face_colors.g);
-	} else if(NORMAL.y < -0.1) { // bottom face
+	if(NORMAL.y > 0.1) { // top (floor) face
 		COLOR.rgb = hue2rgb(face_colors.b, face_colors.a);
+	} else if(NORMAL.y < -0.1) { // bottom (ceiling) face
+		COLOR.rgb = hue2rgb(face_colors.r, face_colors.g);
 	} else if(ceiling_mesh > 0) {
 		if(tnormal.z > 0.1) { // north face
 			if(VERTEX.y > 0.0) { // top vert

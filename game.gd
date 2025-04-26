@@ -1,7 +1,6 @@
 extends Node3D
 
-# TODO: Save/load
-#       copy/paste face
+# TODO: copy/paste face
 #       that ugly stripe along left of center (worked around with 2x MSAA, not "fixed")
 #       box select/operations
 
@@ -14,6 +13,18 @@ var world_width : int = 128
 var world_height : int = 128
 var fog_power : float = 0.5
 var fog_color : Color = Color(0.0, 0.0, 0.0)
+
+const CHANGE_SPEEDS : Array[Array] = [
+	[0.01, 0.1, 1.0],
+	[0.01, 0.1, 1.0],
+	[0.01, 0.1, 1.0],
+	[1.0/64.0, 1.0/8.0, 1.0],
+	[0.01, 0.1, 1.0],
+	[0.01, 0.1, 1.0],
+	[0.01, 0.1, 1.0],
+	[0.01, 0.1, 1.0],
+	[0.01, 0.1, 1.0]
+]
 
 func NO_CB(_s : String):
 	pass
@@ -33,96 +44,111 @@ var mesh : int = 0
 var face : int = 0
 # top, bottom (for vert, height)
 var topbottom : int = 0
-# height, hue, bias, offset
+# height, hue, bias, offset, (fog r, g, b, fog power, eye height)
 var parameter : int = 0
-
-func dir_string(val : int):
-	match val:
-		0:
-			return "north"
-		1:
-			return "east"
-		2:
-			return "south"
-		_:
-			return "west"
-
-func mesh_string(val : int):
-	if val == 0:
-		return "ceiling"
-
-	return "floor"
-
-func face_string(val : int):
-	if val == 0:
-		return "horizontal"
-
-	return "wall"
-
-func topbottom_string(val : int):
-	if val == 0:
-		return "top"
-
-	return "bottom"
-
-func parameter_string(val : int):
-	match val:
-		0:
-			return "height"
-		1:
-			return "hue"
-		2:
-			return "bias"
-		_:
-			return "offset"
 
 func status(status_str : String):
 	if len(status_str) == 0:
 		hud_status.text = "P {},{} D {} M {} F {} T {} P {}".format([pos.x, pos.y,
-																	dir_string(dir),
-																	mesh_string(mesh),
-																	face_string(face),
-																	topbottom_string(topbottom),
-																	parameter_string(parameter)], "{}")
+																	MapParameters.dir_string(dir),
+																	MapParameters.mesh_string(mesh),
+																	MapParameters.face_string(face),
+																	MapParameters.topbottom_string(topbottom),
+																	MapParameters.parameter_string(parameter)], "{}")
 	else:
 		hud_status.text = status_str
 
+func set_fog_color():
+	$'WorldEnvironment'.environment.background_color = fog_color
+	terrain.set_fog_color(fog_color)
+
 func get_facing_pos():
 	match dir:
-		0: # north
+		MapParameters.NORTH:
 			return Vector2i(pos.x, pos.y - 1)
-		1: # east
+		MapParameters.EAST:
 			return Vector2i(pos.x + 1, pos.y)
-		2: # south
+		MapParameters.SOUTH:
 			return Vector2i(pos.x, pos.y + 1)
 		_: # west
-			pass
-
-	return Vector2i(pos.x - 1, pos.y)
+			return Vector2i(pos.x - 1, pos.y)
 
 func change_parameter(amount : float):
 	var p : Vector2i = get_facing_pos()
-	terrain.change(mesh, face, dir, topbottom, parameter, p, amount)
+	if parameter <= MapParameters.GEOMETRY_PARAMETERS_MAX:
+		terrain.change(mesh, face, dir, topbottom, parameter, amount, p)
+	elif parameter == MapParameters.FOG_COLOR_R:
+		fog_color.r += amount
+		set_fog_color()
+	elif parameter == MapParameters.FOG_COLOR_G:
+		fog_color.g += amount
+		set_fog_color()
+	elif parameter == MapParameters.FOG_COLOR_B:
+		fog_color.b += amount
+		set_fog_color()
+	elif parameter == MapParameters.FOG_POWER:
+		fog_power += amount
+		terrain.set_fog_power(fog_power)
+	elif parameter == MapParameters.EYE_HEIGHT:
+		eye_height += amount
+		terrain.set_eye_height(eye_height)
 
 func set_parameter(val : float):
 	var p : Vector2i = get_facing_pos()
-	terrain.set_val(mesh, face, dir, topbottom, parameter, p, val)
+	if parameter <= MapParameters.GEOMETRY_PARAMETERS_MAX:
+		terrain.set_val(mesh, face, dir, topbottom, parameter, val, p)
+	elif parameter == MapParameters.FOG_COLOR_R:
+		fog_color.r = val
+		set_fog_color()
+	elif parameter == MapParameters.FOG_COLOR_G:
+		fog_color.g = val
+		set_fog_color()
+	elif parameter == MapParameters.FOG_COLOR_B:
+		fog_color.b = val
+		set_fog_color()
+	elif parameter == MapParameters.FOG_POWER:
+		fog_power = val
+		terrain.set_fog_power(fog_power)
+	elif parameter == MapParameters.EYE_HEIGHT:
+		eye_height = val
+		terrain.set_eye_height(eye_height)
 
 func get_parameter() -> float:
 	var p : Vector2i = get_facing_pos()
-	return terrain.get_val(mesh, face, dir, topbottom, parameter, p)
+	if parameter <= MapParameters.GEOMETRY_PARAMETERS_MAX:
+		return terrain.get_val(mesh, face, dir, topbottom, parameter, p)
+	elif parameter == MapParameters.FOG_COLOR_R:
+		return fog_color.r
+	elif parameter == MapParameters.FOG_COLOR_G:
+		return fog_color.g
+	elif parameter == MapParameters.FOG_COLOR_B:
+		return fog_color.b
+	elif parameter == MapParameters.FOG_POWER:
+		return fog_power
+	elif parameter == MapParameters.EYE_HEIGHT:
+		return eye_height
+
+	return 0.0
 
 func _ready():
-	$'WorldEnvironment'.environment.background_color = fog_color
 	terrain.set_texture(load("res://textures.png"))
 	terrain.set_view(view_depth, $'Camera3D'.fov)
 	terrain.init_empty_world(Vector2i(world_width, world_height))
 	terrain.set_eye_height(eye_height)
-	terrain.set_fog_color(fog_color)
+	set_fog_color()
 	terrain.set_fog_power(fog_power)
 	terrain.set_pos(pos)
 	terrain.set_dir(dir)
 	status("")
+
+func set_text_entry_mode(cb : Callable, def : String = ""):
+	text_entry_text = String(def)
+	text_entry_cb = cb
+	update_entry(text_entry_text)
+
+func clear_text_entry_mode():
+	text_entry_text = ""
+	text_entry_cb = NO_CB
 
 func update_entry(entry : String):
 	status(">%s" % entry)
@@ -133,10 +159,9 @@ func _input(event : InputEvent):
 			var key_event : InputEventKey = event
 			if key_event.keycode == KEY_ENTER:
 				text_entry_cb.call(text_entry_text)
-				update_status = true
+				clear_text_entry_mode()
 			elif key_event.keycode == KEY_ESCAPE:
-				text_entry_cb = NO_CB
-				text_entry_text = ""
+				clear_text_entry_mode()
 				update_status = true
 			elif key_event.keycode == KEY_BACKSPACE:
 				if len(text_entry_text) > 0:
@@ -146,92 +171,98 @@ func _input(event : InputEvent):
 				text_entry_text = "%s%c" % [text_entry_text, key_event.unicode]
 				update_entry(text_entry_text)
 
-func set_text_entry_mode(cb : Callable, def : String = ""):
-	text_entry_text = String(def)
-	text_entry_cb = cb
-	update_entry(def)
-
 func do_save(mapname : String):
 	last_mapname = mapname
 
 	var err : Error = terrain.save_map(mapname)
 	if err != Error.OK:
-		status(error_string(err))
+		status("Save failed: %s" % error_string(err))
 	else:
 		status("Map %s saved" % mapname)
+
+func get_dict_val(dict : Dictionary, key : StringName, def : int):
+	if key in dict:
+		return dict[key]
+	return def
 
 func do_load(mapname : String):
 	last_mapname = mapname
 
-	var err : Error = terrain.load_map(mapname)
-	if err != Error.OK:
-		status(error_string(err))
+	var result : Dictionary = terrain.load_map(mapname)
+	if result[&'error'] != Error.OK:
+		status("Load failed: %s" % error_string(result[&'error']))
 	else:
+		var pos_x : int = get_dict_val(result, &'pos_x', -1)
+		var pos_y : int = get_dict_val(result, &'pos_y', -1)
+		var new_dir : int = get_dict_val(result, &'dir', -1)
+		if pos_x >= 0 and pos_y >= 0:
+			pos = Vector2i(pos_x, pos_y)
+		if new_dir >= 0:
+			dir = new_dir
 		status("Map %s loaded" % mapname)
 
-func _process(_delta : float):
-	# TODO: height adjust
-	#       direct number entry
-	#       adjustable fog parameters
+func do_store(num : String):
+	if num.is_valid_float():
+		stored = num.to_float()
 
+func move(f_amount : int, s_amount : int = 0):
+	match dir:
+		MapParameters.NORTH:
+			pos.y -= f_amount
+			pos.x += s_amount
+		MapParameters.EAST:
+			pos.x += f_amount
+			pos.y += s_amount
+		MapParameters.SOUTH:
+			pos.y += f_amount
+			pos.x -= s_amount
+		_: # west
+			pos.x -= f_amount
+			pos.y -= s_amount
+
+func spin(amount : int):
+	dir += amount
+
+	if dir < 0:
+		dir = 3
+	elif dir > 3:
+		dir = 0
+
+func _process(_delta : float):
 	var status_str : String = ""
 
 	var update_pos : bool = false
 	var update_dir : bool = false
+	var change_speed : int = 1
 
 	if text_entry_cb == NO_CB:
+		if Input.is_action_pressed(&'slower'):
+			change_speed -= 1
+
+		if Input.is_action_pressed(&'faster'):
+			change_speed += 1
+
 		if Input.is_action_just_pressed(&'forward'):
-			match dir:
-				0: # north
-					pos.y -= 1
-				1: # east
-					pos.x += 1
-				2: # south
-					pos.y += 1
-				_: # west
-					pos.x -= 1
+			move(1)
 			update_pos = true
 
 		if Input.is_action_just_pressed(&'back'):
-			match dir:
-				0: # north
-					pos.y += 1
-				1: # east
-					pos.x -= 1
-				2: # south
-					pos.y -= 1
-				_: # west
-					pos.x += 1
+			move(-1)
 			update_pos = true
 
 		if Input.is_action_just_pressed(&'strafe left'):
-			match dir:
-				0: # north
-					pos.x -= 1
-				1: # east
-					pos.y -= 1
-				2: # south
-					pos.x += 1
-				_: # west
-					pos.y += 1
+			move(0, -1)
 			update_pos = true
-		elif Input.is_action_just_pressed(&'turn left'):
-			dir -= 1
-			update_dir = true
+
+		if Input.is_action_just_pressed(&'turn left'):
+			spin(-1)
 
 		if Input.is_action_just_pressed(&'strafe right'):
-			match dir:
-				0: # north
-					pos.x += 1
-				1: # east
-					pos.y += 1
-				2: # south
-					pos.x -= 1
-				_: # west
-					pos.y -= 1
+			move(0, 1)
 			update_pos = true
-		elif Input.is_action_just_pressed(&'turn right'):
-			dir += 1
+
+		if Input.is_action_just_pressed(&'turn right'):
+			spin(1)
 			update_dir = true
 
 		if update_pos:
@@ -239,10 +270,6 @@ func _process(_delta : float):
 			update_status = true
 
 		if update_dir:
-			if dir < 0:
-				dir = 3
-			elif dir > 3:
-				dir = 0
 			terrain.set_dir(dir)
 			update_status = true
 
@@ -269,16 +296,16 @@ func _process(_delta : float):
 
 		if Input.is_action_just_pressed(&'cycle parameter'):
 			parameter += 1
-			if parameter == 4:
+			if parameter == MapParameters.MAX_PARAMETER:
 				parameter = 0
 			update_status = true
 
 		if Input.is_action_just_pressed(&'inc parameter'):
-			change_parameter(0.1)
+			change_parameter(CHANGE_SPEEDS[parameter][change_speed])
 			update_status = true
 
 		if Input.is_action_just_pressed(&'dec parameter'):
-			change_parameter(-0.1)
+			change_parameter(-CHANGE_SPEEDS[parameter][change_speed])
 			update_status = true
 
 		if Input.is_action_just_pressed(&'get value'):
@@ -294,6 +321,9 @@ func _process(_delta : float):
 
 		if Input.is_action_just_pressed(&'load'):
 			set_text_entry_mode(do_load, last_mapname)
+
+		if Input.is_action_just_pressed(&'value_entry'):
+			set_text_entry_mode(do_store, str(stored))
 
 		if update_status:
 			status(status_str)
