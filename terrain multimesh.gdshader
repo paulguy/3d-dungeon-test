@@ -7,7 +7,7 @@ uniform sampler2D world_positions;
 uniform ivec2 view_pos; // position in map
 uniform sampler2D map_positions; // Coordinate offsets for looking up data in textures
 uniform mat3 mesh_transform;
-uniform float view_height_bias;
+uniform float eye_height;
 uniform int lookup_tex_width;
 uniform float fog_power;
 uniform vec3 fog_color;
@@ -263,7 +263,7 @@ void vertex() {
 	VERTEX.y = ((top_vert * fceiling_mesh) * mesh_face_heights.r) +
 			   ((bottom_vert * fceiling_mesh) * mesh_face_heights.g) +
 			   ((top_vert * ffloor_mesh) * mesh_face_heights.b) +
-			   ((bottom_vert * ffloor_mesh) * mesh_face_heights.a) - view_height - view_height_bias;
+			   ((bottom_vert * ffloor_mesh) * mesh_face_heights.a) - view_height - eye_height;
 	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	NORMAL = normalize((MODELVIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	BINORMAL = normalize((MODELVIEW_MATRIX * vec4(BINORMAL, 0.0)).xyz);

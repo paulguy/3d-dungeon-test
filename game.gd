@@ -1,18 +1,31 @@
 extends Node3D
 
+# TODO: Save/load
+#       copy/paste face
+#       that ugly stripe along left of center (worked around with 2x MSAA, not "fixed")
+#       box select/operations
+
 @onready var terrain : Node3D = $'Terrain Map'
-@onready var status : Label = $'HUD/Status'
+@onready var hud_status : Label = $'HUD/Status'
 
 var view_depth : int = 49
 var eye_height : float = 0.5
 var world_width : int = 128
 var world_height : int = 128
-var fog_power : float = 0.2
-var fog_color : Color = Color(1.0, 0.0, 0.0)
+var fog_power : float = 0.5
+var fog_color : Color = Color(0.0, 0.0, 0.0)
+
+func NO_CB(_s : String):
+	pass
 
 var pos : Vector2i = Vector2i(world_width / 2, world_height / 2)
 var dir : int = 0
 var stored : float = 0.0
+var last_mapname : String = "untitled"
+var update_status : bool = false
+
+var text_entry_cb : Callable = NO_CB
+var text_entry_text : String = ""
 
 # ceiling, floor
 var mesh : int = 0
@@ -63,13 +76,16 @@ func parameter_string(val : int):
 		_:
 			return "offset"
 
-func update_status():
-	status.text = "P {},{} D {} {} M {} {} F {} {} T {} {} P {} {}".format([pos.x, pos.y,
-																		   dir, dir_string(dir),
-																		   mesh, mesh_string(mesh),
-																		   face, face_string(face),
-																		   topbottom, topbottom_string(topbottom),
-																		   parameter, parameter_string(parameter)], "{}")
+func status(status_str : String):
+	if len(status_str) == 0:
+		hud_status.text = "P {},{} D {} M {} F {} T {} P {}".format([pos.x, pos.y,
+																	dir_string(dir),
+																	mesh_string(mesh),
+																	face_string(face),
+																	topbottom_string(topbottom),
+																	parameter_string(parameter)], "{}")
+	else:
+		hud_status.text = status_str
 
 func get_facing_pos():
 	match dir:
@@ -86,813 +102,199 @@ func get_facing_pos():
 
 func change_parameter(amount : float):
 	var p : Vector2i = get_facing_pos()
-
-	match mesh:
-		0:
-			match face:
-				0:
-					match topbottom:
-						0:
-							match parameter:
-								0:
-									terrain.change_ceiling_top_height(p, amount)
-								1:
-									terrain.change_top_hue(p, amount)
-								2:
-									terrain.change_top_bias(p, amount)
-								_:
-									terrain.change_ceiling_top_offset(p, amount)
-						_:
-							match parameter:
-								0:
-									terrain.change_ceiling_bottom_height(p, amount)
-								1:
-									terrain.change_bottom_hue(p, amount)
-								2:
-									terrain.change_bottom_bias(p, amount)
-								_:
-									terrain.change_ceiling_bottom_offset(p, amount)
-				_:
-					match dir:
-						0:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.change_ceiling_top_height(p, amount)
-										1:
-											terrain.change_ceiling_south_top_hue(p, amount)
-										2:
-											terrain.change_ceiling_south_top_bias(p, amount)
-										_:
-											terrain.change_ceiling_south_offset(p, amount)
-								_:
-									match parameter:
-										0:
-											terrain.change_ceiling_bottom_height(p, amount)
-										1:
-											terrain.change_ceiling_south_bottom_hue(p, amount)
-										2:
-											terrain.change_ceiling_south_bottom_bias(p, amount)
-										_:
-											terrain.change_ceiling_south_offset(p, amount)
-						1:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.change_ceiling_top_height(p, amount)
-										1:
-											terrain.change_ceiling_west_top_hue(p, amount)
-										2:
-											terrain.change_ceiling_west_top_bias(p, amount)
-										_:
-											terrain.change_ceiling_west_offset(p, amount)
-								_:
-									match parameter:
-										0:
-											terrain.change_ceiling_bottom_height(p, amount)
-										1:
-											terrain.change_ceiling_west_bottom_hue(p, amount)
-										2:
-											terrain.change_ceiling_west_bottom_bias(p, amount)
-										_:
-											terrain.change_ceiling_west_offset(p, amount)
-						2:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.change_ceiling_top_height(p, amount)
-										1:
-											terrain.change_ceiling_north_top_hue(p, amount)
-										2:
-											terrain.change_ceiling_north_top_bias(p, amount)
-										_:
-											terrain.change_ceiling_north_offset(p, amount)
-								_:
-									match parameter:
-										0:
-											terrain.change_ceiling_bottom_height(p, amount)
-										1:
-											terrain.change_ceiling_north_bottom_hue(p, amount)
-										2:
-											terrain.change_ceiling_north_bottom_bias(p, amount)
-										_:
-											terrain.change_ceiling_north_offset(p, amount)
-						_:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.change_ceiling_top_height(p, amount)
-										1:
-											terrain.change_ceiling_east_top_hue(p, amount)
-										2:
-											terrain.change_ceiling_east_top_bias(p, amount)
-										_:
-											terrain.change_ceiling_east_offset(p, amount)
-								_:
-									match parameter:
-										0:
-											terrain.change_ceiling_bottom_height(p, amount)
-										1:
-											terrain.change_ceiling_east_bottom_hue(p, amount)
-										2:
-											terrain.change_ceiling_east_bottom_bias(p, amount)
-										_:
-											terrain.change_ceiling_east_offset(p, amount)
-		_:
-			match face:
-				0:
-					match topbottom:
-						0:
-							match parameter:
-								0:
-									terrain.change_floor_top_height(p, amount)
-								1:
-									terrain.change_top_hue(p, amount)
-								2:
-									terrain.change_top_bias(p, amount)
-								_:
-									terrain.change_floor_top_offset(p, amount)
-						_:
-							match parameter:
-								0:
-									terrain.change_floor_bottom_height(p, amount)
-								1:
-									terrain.change_bottom_hue(p, amount)
-								2:
-									terrain.change_bottom_bias(p, amount)
-								_:
-									terrain.change_floor_bottom_offset(p, amount)
-				_:
-					match dir:
-						0:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.change_floor_top_height(p, amount)
-										1:
-											terrain.change_floor_south_top_hue(p, amount)
-										2:
-											terrain.change_floor_south_top_bias(p, amount)
-										_:
-											terrain.change_floor_south_offset(p, amount)
-								_:
-									match parameter:
-										0:
-											terrain.change_floor_bottom_height(p, amount)
-										1:
-											terrain.change_floor_south_bottom_hue(p, amount)
-										2:
-											terrain.change_floor_south_bottom_bias(p, amount)
-										_:
-											terrain.change_floor_south_offset(p, amount)
-						1:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.change_floor_top_height(p, amount)
-										1:
-											terrain.change_floor_west_top_hue(p, amount)
-										2:
-											terrain.change_floor_west_top_bias(p, amount)
-										_:
-											terrain.change_floor_west_offset(p, amount)
-								_:
-									match parameter:
-										0:
-											terrain.change_floor_bottom_height(p, amount)
-										1:
-											terrain.change_floor_west_bottom_hue(p, amount)
-										2:
-											terrain.change_floor_west_bottom_bias(p, amount)
-										_:
-											terrain.change_floor_west_offset(p, amount)
-						2:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.change_floor_top_height(p, amount)
-										1:
-											terrain.change_floor_north_top_hue(p, amount)
-										2:
-											terrain.change_floor_north_top_bias(p, amount)
-										_:
-											terrain.change_floor_north_offset(p, amount)
-								_:
-									match parameter:
-										0:
-											terrain.change_floor_bottom_height(p, amount)
-										1:
-											terrain.change_floor_north_bottom_hue(p, amount)
-										2:
-											terrain.change_floor_north_bottom_bias(p, amount)
-										_:
-											terrain.change_floor_north_offset(p, amount)
-						_:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.change_floor_top_height(p, amount)
-										1:
-											terrain.change_floor_east_top_hue(p, amount)
-										2:
-											terrain.change_floor_east_top_bias(p, amount)
-										_:
-											terrain.change_floor_east_offset(p, amount)
-								_:
-									match parameter:
-										0:
-											terrain.change_floor_bottom_height(p, amount)
-										1:
-											terrain.change_floor_east_bottom_hue(p, amount)
-										2:
-											terrain.change_floor_east_bottom_bias(p, amount)
-										_:
-											terrain.change_floor_east_offset(p, amount)
+	terrain.change(mesh, face, dir, topbottom, parameter, p, amount)
 
 func set_parameter(val : float):
 	var p : Vector2i = get_facing_pos()
-
-	match mesh:
-		0:
-			match face:
-				0:
-					match topbottom:
-						0:
-							match parameter:
-								0:
-									terrain.set_ceiling_top_height(p, val)
-								1:
-									terrain.set_top_hue(p, val)
-								2:
-									terrain.set_top_bias(p, val)
-								_:
-									terrain.set_ceiling_top_offset(p, val)
-						_:
-							match parameter:
-								0:
-									terrain.set_ceiling_bottom_height(p, val)
-								1:
-									terrain.set_bottom_hue(p, val)
-								2:
-									terrain.set_bottom_bias(p, val)
-								_:
-									terrain.set_ceiling_bottom_offset(p, val)
-				_:
-					match dir:
-						0:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.set_ceiling_top_height(p, val)
-										1:
-											terrain.set_ceiling_south_top_hue(p, val)
-										2:
-											terrain.set_ceiling_south_top_bias(p, val)
-										_:
-											terrain.set_ceiling_south_offset(p, val)
-								_:
-									match parameter:
-										0:
-											terrain.set_ceiling_bottom_height(p, val)
-										1:
-											terrain.set_ceiling_south_bottom_hue(p, val)
-										2:
-											terrain.set_ceiling_south_bottom_bias(p, val)
-										_:
-											terrain.set_ceiling_south_offset(p, val)
-						1:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.set_ceiling_top_height(p, val)
-										1:
-											terrain.set_ceiling_west_top_hue(p, val)
-										2:
-											terrain.set_ceiling_west_top_bias(p, val)
-										_:
-											terrain.set_ceiling_west_offset(p, val)
-								_:
-									match parameter:
-										0:
-											terrain.set_ceiling_bottom_height(p, val)
-										1:
-											terrain.set_ceiling_west_bottom_hue(p, val)
-										2:
-											terrain.set_ceiling_west_bottom_bias(p, val)
-										_:
-											terrain.set_ceiling_west_offset(p, val)
-						2:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.set_ceiling_top_height(p, val)
-										1:
-											terrain.set_ceiling_north_top_hue(p, val)
-										2:
-											terrain.set_ceiling_north_top_bias(p, val)
-										_:
-											terrain.set_ceiling_north_offset(p, val)
-								_:
-									match parameter:
-										0:
-											terrain.set_ceiling_bottom_height(p, val)
-										1:
-											terrain.set_ceiling_north_bottom_hue(p, val)
-										2:
-											terrain.set_ceiling_north_bottom_bias(p, val)
-										_:
-											terrain.set_ceiling_north_offset(p, val)
-						_:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.set_ceiling_top_height(p, val)
-										1:
-											terrain.set_ceiling_east_top_hue(p, val)
-										2:
-											terrain.set_ceiling_east_top_bias(p, val)
-										_:
-											terrain.set_ceiling_east_offset(p, val)
-								_:
-									match parameter:
-										0:
-											terrain.set_ceiling_bottom_height(p, val)
-										1:
-											terrain.set_ceiling_east_bottom_hue(p, val)
-										2:
-											terrain.set_ceiling_east_bottom_bias(p, val)
-										_:
-											terrain.set_ceiling_east_offset(p, val)
-		_:
-			match face:
-				0:
-					match topbottom:
-						0:
-							match parameter:
-								0:
-									terrain.set_floor_top_height(p, val)
-								1:
-									terrain.set_top_hue(p, val)
-								2:
-									terrain.set_top_bias(p, val)
-								_:
-									terrain.set_floor_top_offset(p, val)
-						_:
-							match parameter:
-								0:
-									terrain.set_floor_bottom_height(p, val)
-								1:
-									terrain.set_bottom_hue(p, val)
-								2:
-									terrain.set_bottom_bias(p, val)
-								_:
-									terrain.set_floor_bottom_offset(p, val)
-				_:
-					match dir:
-						0:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.set_floor_top_height(p, val)
-										1:
-											terrain.set_floor_south_top_hue(p, val)
-										2:
-											terrain.set_floor_south_top_bias(p, val)
-										_:
-											terrain.set_floor_south_offset(p, val)
-								_:
-									match parameter:
-										0:
-											terrain.set_floor_bottom_height(p, val)
-										1:
-											terrain.set_floor_south_bottom_hue(p, val)
-										2:
-											terrain.set_floor_south_bottom_bias(p, val)
-										_:
-											terrain.set_floor_south_offset(p, val)
-						1:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.set_floor_top_height(p, val)
-										1:
-											terrain.set_floor_west_top_hue(p, val)
-										2:
-											terrain.set_floor_west_top_bias(p, val)
-										_:
-											terrain.set_floor_west_offset(p, val)
-								_:
-									match parameter:
-										0:
-											terrain.set_floor_bottom_height(p, val)
-										1:
-											terrain.set_floor_west_bottom_hue(p, val)
-										2:
-											terrain.set_floor_west_bottom_bias(p, val)
-										_:
-											terrain.set_floor_west_offset(p, val)
-						2:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.set_floor_top_height(p, val)
-										1:
-											terrain.set_floor_north_top_hue(p, val)
-										2:
-											terrain.set_floor_north_top_bias(p, val)
-										_:
-											terrain.set_floor_north_offset(p, val)
-								_:
-									match parameter:
-										0:
-											terrain.set_floor_bottom_height(p, val)
-										1:
-											terrain.set_floor_north_bottom_hue(p, val)
-										2:
-											terrain.set_floor_north_bottom_bias(p, val)
-										_:
-											terrain.set_floor_north_offset(p, val)
-						_:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											terrain.set_floor_top_height(p, val)
-										1:
-											terrain.set_floor_east_top_hue(p, val)
-										2:
-											terrain.set_floor_east_top_bias(p, val)
-										_:
-											terrain.set_floor_east_offset(p, val)
-								_:
-									match parameter:
-										0:
-											terrain.set_floor_bottom_height(p, val)
-										1:
-											terrain.set_floor_east_bottom_hue(p, val)
-										2:
-											terrain.set_floor_east_bottom_bias(p, val)
-										_:
-											terrain.set_floor_east_offset(p, val)
+	terrain.set_val(mesh, face, dir, topbottom, parameter, p, val)
 
 func get_parameter() -> float:
 	var p : Vector2i = get_facing_pos()
-
-	match mesh:
-		0:
-			match face:
-				0:
-					match topbottom:
-						0:
-							match parameter:
-								0:
-									return terrain.get_ceiling_top_height(p)
-								1:
-									return terrain.get_top_hue(p)
-								2:
-									return terrain.get_top_bias(p)
-								_:
-									return terrain.get_ceiling_top_offset(p)
-						_:
-							match parameter:
-								0:
-									return terrain.get_ceiling_bottom_height(p)
-								1:
-									return terrain.get_bottom_hue(p)
-								2:
-									return terrain.get_bottom_bias(p)
-								_:
-									return terrain.get_ceiling_bottom_offset(p)
-				_:
-					match dir:
-						0:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											return terrain.get_ceiling_top_height(p)
-										1:
-											return terrain.get_ceiling_south_top_hue(p)
-										2:
-											return terrain.get_ceiling_south_top_bias(p)
-										_:
-											return terrain.get_ceiling_south_offset(p)
-								_:
-									match parameter:
-										0:
-											return terrain.get_ceiling_bottom_height(p)
-										1:
-											return terrain.get_ceiling_south_bottom_hue(p)
-										2:
-											return terrain.get_ceiling_south_bottom_bias(p)
-										_:
-											return terrain.get_ceiling_south_offset(p)
-						1:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											return terrain.get_ceiling_top_height(p)
-										1:
-											return terrain.get_ceiling_west_top_hue(p)
-										2:
-											return terrain.get_ceiling_west_top_bias(p)
-										_:
-											return terrain.get_ceiling_west_offset(p)
-								_:
-									match parameter:
-										0:
-											return terrain.get_ceiling_bottom_height(p)
-										1:
-											return terrain.get_ceiling_west_bottom_hue(p)
-										2:
-											return terrain.get_ceiling_west_bottom_bias(p)
-										_:
-											return terrain.get_ceiling_west_offset(p)
-						2:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											return terrain.get_ceiling_top_height(p)
-										1:
-											return terrain.get_ceiling_north_top_hue(p)
-										2:
-											return terrain.get_ceiling_north_top_bias(p)
-										_:
-											return terrain.get_ceiling_north_offset(p)
-								_:
-									match parameter:
-										0:
-											return terrain.get_ceiling_bottom_height(p)
-										1:
-											return terrain.get_ceiling_north_bottom_hue(p)
-										2:
-											return terrain.get_ceiling_north_bottom_bias(p)
-										_:
-											return terrain.get_ceiling_north_offset(p)
-						_:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											return terrain.get_ceiling_top_height(p)
-										1:
-											return terrain.get_ceiling_east_top_hue(p)
-										2:
-											return terrain.get_ceiling_east_top_bias(p)
-										_:
-											return terrain.get_ceiling_east_offset(p)
-								_:
-									match parameter:
-										0:
-											return terrain.get_ceiling_bottom_height(p)
-										1:
-											return terrain.get_ceiling_east_bottom_hue(p)
-										2:
-											return terrain.get_ceiling_east_bottom_bias(p)
-										_:
-											return terrain.get_ceiling_east_offset(p)
-		_:
-			match face:
-				0:
-					match topbottom:
-						0:
-							match parameter:
-								0:
-									return terrain.get_floor_top_height(p)
-								1:
-									return terrain.get_top_hue(p)
-								2:
-									return terrain.get_top_bias(p)
-								_:
-									return terrain.get_floor_top_offset(p)
-						_:
-							match parameter:
-								0:
-									return terrain.get_floor_bottom_height(p)
-								1:
-									return terrain.get_bottom_hue(p)
-								2:
-									return terrain.get_bottom_bias(p)
-								_:
-									return terrain.get_floor_bottom_offset(p)
-				_:
-					match dir:
-						0:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											return terrain.get_floor_top_height(p)
-										1:
-											return terrain.get_floor_south_top_hue(p)
-										2:
-											return terrain.get_floor_south_top_bias(p)
-										_:
-											return terrain.get_floor_south_offset(p)
-								_:
-									match parameter:
-										0:
-											return terrain.get_floor_bottom_height(p)
-										1:
-											return terrain.get_floor_south_bottom_hue(p)
-										2:
-											return terrain.get_floor_south_bottom_bias(p)
-										_:
-											return terrain.get_floor_south_offset(p)
-						1:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											return terrain.get_floor_top_height(p)
-										1:
-											return terrain.get_floor_west_top_hue(p)
-										2:
-											return terrain.get_floor_west_top_bias(p)
-										_:
-											return terrain.get_floor_west_offset(p)
-								_:
-									match parameter:
-										0:
-											return terrain.get_floor_bottom_height(p)
-										1:
-											return terrain.get_floor_west_bottom_hue(p)
-										2:
-											return terrain.get_floor_west_bottom_bias(p)
-										_:
-											return terrain.get_floor_west_offset(p)
-						2:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											return terrain.get_floor_top_height(p)
-										1:
-											return terrain.get_floor_north_top_hue(p)
-										2:
-											return terrain.get_floor_north_top_bias(p)
-										_:
-											return terrain.get_floor_north_offset(p)
-								_:
-									match parameter:
-										0:
-											return terrain.get_floor_bottom_height(p)
-										1:
-											return terrain.get_floor_north_bottom_hue(p)
-										2:
-											return terrain.get_floor_north_bottom_bias(p)
-										_:
-											return terrain.get_floor_north_offset(p)
-						_:
-							match topbottom:
-								0:
-									match parameter:
-										0:
-											return terrain.get_floor_top_height(p)
-										1:
-											return terrain.get_floor_east_top_hue(p)
-										2:
-											return terrain.get_floor_east_top_bias(p)
-										_:
-											return terrain.get_floor_east_offset(p)
-								_:
-									match parameter:
-										0:
-											return terrain.get_floor_bottom_height(p)
-										1:
-											return terrain.get_floor_east_bottom_hue(p)
-										2:
-											return terrain.get_floor_east_bottom_bias(p)
-										_:
-											return terrain.get_floor_east_offset(p)
+	return terrain.get_val(mesh, face, dir, topbottom, parameter, p)
 
 func _ready():
 	$'WorldEnvironment'.environment.background_color = fog_color
-	terrain.init_empty_world(world_width, world_height,
-							 $'Camera3D'.fov, eye_height, view_depth,
-							 fog_power, fog_color)
+	terrain.set_texture(load("res://textures.png"))
+	terrain.set_view(view_depth, $'Camera3D'.fov)
+	terrain.init_empty_world(Vector2i(world_width, world_height))
+	terrain.set_eye_height(eye_height)
+	terrain.set_fog_color(fog_color)
+	terrain.set_fog_power(fog_power)
 	terrain.set_pos(pos)
 	terrain.set_dir(dir)
-	update_status()
+	status("")
+
+func update_entry(entry : String):
+	status(">%s" % entry)
+
+func _input(event : InputEvent):
+	if text_entry_cb != NO_CB:
+		if event is InputEventKey and event.is_pressed():
+			var key_event : InputEventKey = event
+			if key_event.keycode == KEY_ENTER:
+				text_entry_cb.call(text_entry_text)
+				update_status = true
+			elif key_event.keycode == KEY_ESCAPE:
+				text_entry_cb = NO_CB
+				text_entry_text = ""
+				update_status = true
+			elif key_event.keycode == KEY_BACKSPACE:
+				if len(text_entry_text) > 0:
+					text_entry_text = text_entry_text.substr(0, len(text_entry_text) - 1)
+					update_entry(text_entry_text)
+			else:
+				text_entry_text = "%s%c" % [text_entry_text, key_event.unicode]
+				update_entry(text_entry_text)
+
+func set_text_entry_mode(cb : Callable, def : String = ""):
+	text_entry_text = String(def)
+	text_entry_cb = cb
+	update_entry(def)
+
+func do_save(mapname : String):
+	last_mapname = mapname
+
+	var err : Error = terrain.save_map(mapname)
+	if err != Error.OK:
+		status(error_string(err))
+	else:
+		status("Map %s saved" % mapname)
+
+func do_load(mapname : String):
+	last_mapname = mapname
+
+	var err : Error = terrain.load_map(mapname)
+	if err != Error.OK:
+		status(error_string(err))
+	else:
+		status("Map %s loaded" % mapname)
 
 func _process(_delta : float):
+	# TODO: height adjust
+	#       direct number entry
+	#       adjustable fog parameters
+
+	var status_str : String = ""
+
 	var update_pos : bool = false
 	var update_dir : bool = false
 
-	if Input.is_action_just_pressed(&'forward'):
-		match dir:
-			0: # north
-				pos.y -= 1
-			1: # east
-				pos.x += 1
-			2: # south
-				pos.y += 1
-			_: # west
-				pos.x -= 1
-		update_pos = true
+	if text_entry_cb == NO_CB:
+		if Input.is_action_just_pressed(&'forward'):
+			match dir:
+				0: # north
+					pos.y -= 1
+				1: # east
+					pos.x += 1
+				2: # south
+					pos.y += 1
+				_: # west
+					pos.x -= 1
+			update_pos = true
 
-	if Input.is_action_just_pressed(&'back'):
-		match dir:
-			0: # north
-				pos.y += 1
-			1: # east
-				pos.x -= 1
-			2: # south
-				pos.y -= 1
-			_: # west
-				pos.x += 1
-		update_pos = true
+		if Input.is_action_just_pressed(&'back'):
+			match dir:
+				0: # north
+					pos.y += 1
+				1: # east
+					pos.x -= 1
+				2: # south
+					pos.y -= 1
+				_: # west
+					pos.x += 1
+			update_pos = true
 
-	if Input.is_action_just_pressed(&'strafe left'):
-		match dir:
-			0: # north
-				pos.x -= 1
-			1: # east
-				pos.y -= 1
-			2: # south
-				pos.x += 1
-			_: # west
-				pos.y += 1
-		update_pos = true
-	elif Input.is_action_just_pressed(&'turn left'):
-		dir -= 1
-		update_dir = true
+		if Input.is_action_just_pressed(&'strafe left'):
+			match dir:
+				0: # north
+					pos.x -= 1
+				1: # east
+					pos.y -= 1
+				2: # south
+					pos.x += 1
+				_: # west
+					pos.y += 1
+			update_pos = true
+		elif Input.is_action_just_pressed(&'turn left'):
+			dir -= 1
+			update_dir = true
 
-	if Input.is_action_just_pressed(&'strafe right'):
-		match dir:
-			0: # north
-				pos.x += 1
-			1: # east
-				pos.y += 1
-			2: # south
-				pos.x -= 1
-			_: # west
-				pos.y -= 1
-		update_pos = true
-	elif Input.is_action_just_pressed(&'turn right'):
-		dir += 1
-		update_dir = true
+		if Input.is_action_just_pressed(&'strafe right'):
+			match dir:
+				0: # north
+					pos.x += 1
+				1: # east
+					pos.y += 1
+				2: # south
+					pos.x -= 1
+				_: # west
+					pos.y -= 1
+			update_pos = true
+		elif Input.is_action_just_pressed(&'turn right'):
+			dir += 1
+			update_dir = true
 
-	if update_pos:
-		terrain.set_pos(pos)
+		if update_pos:
+			terrain.set_pos(pos)
+			update_status = true
 
-	if update_dir:
-		if dir < 0:
-			dir = 3
-		elif dir > 3:
-			dir = 0
-		terrain.set_dir(dir)
+		if update_dir:
+			if dir < 0:
+				dir = 3
+			elif dir > 3:
+				dir = 0
+			terrain.set_dir(dir)
+			update_status = true
 
-	if Input.is_action_just_pressed(&'cycle mesh'):
-		if mesh == 0:
-			mesh = 1
-		else:
-			mesh = 0
+		if Input.is_action_just_pressed(&'cycle mesh'):
+			if mesh == 0:
+				mesh = 1
+			else:
+				mesh = 0
+			update_status = true
 
-	if Input.is_action_just_pressed(&'cycle face'):
-		if face == 0:
-			face = 1
-		else:
-			face = 0
+		if Input.is_action_just_pressed(&'cycle face'):
+			if face == 0:
+				face = 1
+			else:
+				face = 0
+			update_status = true
 
-	if Input.is_action_just_pressed(&'cycle tb'):
-		if topbottom == 0:
-			topbottom = 1
-		else:
-			topbottom = 0
+		if Input.is_action_just_pressed(&'cycle tb'):
+			if topbottom == 0:
+				topbottom = 1
+			else:
+				topbottom = 0
+			update_status = true
 
-	if Input.is_action_just_pressed(&'cycle parameter'):
-		parameter += 1
-		if parameter == 4:
-			parameter = 0
+		if Input.is_action_just_pressed(&'cycle parameter'):
+			parameter += 1
+			if parameter == 4:
+				parameter = 0
+			update_status = true
 
-	if Input.is_action_just_pressed(&'inc parameter'):
-		change_parameter(0.1)
+		if Input.is_action_just_pressed(&'inc parameter'):
+			change_parameter(0.1)
+			update_status = true
 
-	if Input.is_action_just_pressed(&'dec parameter'):
-		change_parameter(-0.1)
+		if Input.is_action_just_pressed(&'dec parameter'):
+			change_parameter(-0.1)
+			update_status = true
 
-	if Input.is_action_just_pressed(&'get value'):
-		stored = get_parameter()
+		if Input.is_action_just_pressed(&'get value'):
+			stored = get_parameter()
+			update_status = true
 
-	if Input.is_action_just_pressed(&'put value'):
-		set_parameter(stored)
+		if Input.is_action_just_pressed(&'put value'):
+			set_parameter(stored)
+			update_status = true
 
-	update_status()
+		if Input.is_action_just_pressed(&'save'):
+			set_text_entry_mode(do_save, last_mapname)
+
+		if Input.is_action_just_pressed(&'load'):
+			set_text_entry_mode(do_load, last_mapname)
+
+		if update_status:
+			status(status_str)
+			update_status = false

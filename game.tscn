@@ -19,7 +19,6 @@ keep_aspect = 0
 current = true
 
 [node name="Terrain Map" parent="." instance=ExtResource("2_feb5d")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
