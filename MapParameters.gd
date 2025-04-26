@@ -16,23 +16,23 @@ const GEOMETRY_PARAMETERS_MAX = OFFSET
 
 static func parameter_string(val : int) -> String:
 	match val:
-		MapParameters.HEIGHT:
+		HEIGHT:
 			return "height"
-		MapParameters.HUE:
+		HUE:
 			return "hue"
-		MapParameters.BIAS:
+		BIAS:
 			return "bias"
-		MapParameters.OFFSET:
+		OFFSET:
 			return "offset"
-		MapParameters.FOG_COLOR_R:
+		FOG_COLOR_R:
 			return "fog color r"
-		MapParameters.FOG_COLOR_G:
+		FOG_COLOR_G:
 			return "fog color g"
-		MapParameters.FOG_COLOR_B:
+		FOG_COLOR_B:
 			return "fog color b"
-		MapParameters.FOG_POWER:
+		FOG_POWER:
 			return "fog power"
-		MapParameters.EYE_HEIGHT:
+		EYE_HEIGHT:
 			return "eye height"
 
 	return "invalid"
@@ -52,8 +52,10 @@ static func dir_string(val : int):
 			return "east"
 		SOUTH:
 			return "south"
-		_: # west
+		WEST:
 			return "west"
+
+	return "invalid"
 
 static func get_opp_dir(dir : int):
 	match dir:
@@ -72,10 +74,13 @@ enum {
 }
 
 static func face_string(val : int):
-	if val == HORIZ:
-		return "horizontal"
+	match val:
+		HORIZ:
+			return "horizontal"
+		WALL:
+			return "wall"
 
-	return "wall"
+	return "invalid"
 
 enum {
 	CEILING = 0,
@@ -83,10 +88,13 @@ enum {
 }
 
 static func mesh_string(val : int):
-	if val == CEILING:
-		return "ceiling"
+	match val:
+		CEILING:
+			return "ceiling"
+		FLOOR:
+			return "floor"
 
-	return "floor"
+	return "invalid"
 
 enum {
 	TOP = 0,
@@ -94,7 +102,10 @@ enum {
 }
 
 static func topbottom_string(val : int):
-	if val == TOP:
-		return "top"
+	match val:
+		TOP:
+			return "top"
+		BOTTOM:
+			return "bottom"
 
-	return "bottom"
+	return "invalid"

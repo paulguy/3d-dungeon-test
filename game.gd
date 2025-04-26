@@ -254,12 +254,13 @@ func _process(_delta : float):
 			move(0, -1)
 			update_pos = true
 
-		if Input.is_action_just_pressed(&'turn left'):
-			spin(-1)
-
 		if Input.is_action_just_pressed(&'strafe right'):
 			move(0, 1)
 			update_pos = true
+
+		if Input.is_action_just_pressed(&'turn left'):
+			spin(-1)
+			update_dir = true
 
 		if Input.is_action_just_pressed(&'turn right'):
 			spin(1)
