@@ -173,7 +173,10 @@ func write_image(writer : ZIPPacker, layername : StringName) -> Error:
 
 	return Error.OK
 
-func save_map(mapname : String) -> Error:
+func save_map(mapname : String,
+			  pos = null, dir = null,
+			  fog_color = null, fog_power = null,
+			  eye_height = null) -> Error:
 	var writer : ZIPPacker = ZIPPacker.new()
 	var err : Error = writer.open("user://%s.zip" % mapname)
 	if err != Error.OK:
@@ -194,6 +197,43 @@ func save_map(mapname : String) -> Error:
 	err = write_string(writer, ("height %d\n" % dims.y))
 	if err != Error.OK:
 		return err
+
+	if pos != null:
+		err = write_string(writer, ("pos_x %d\n" % pos.x))
+		if err != Error.OK:
+			return err
+
+		err = write_string(writer, ("pos_y %d\n" % pos.y))
+		if err != Error.OK:
+			return err
+
+	if dir != null:
+		err = write_string(writer, ("dir %d\n" % dir))
+		if err != Error.OK:
+			return err
+
+	if fog_color != null:
+		err = write_string(writer, ("fog_r %f\n" % fog_color.r))
+		if err != Error.OK:
+			return err
+
+		err = write_string(writer, ("fog_g %f\n" % fog_color.g))
+		if err != Error.OK:
+			return err
+
+		err = write_string(writer, ("fog_b %f\n" % fog_color.b))
+		if err != Error.OK:
+			return err
+
+	if fog_power != null:
+		err = write_string(writer, ("fog_power %f\n" % fog_power))
+		if err != Error.OK:
+			return err
+
+	if eye_height != null:
+		err = write_string(writer, ("eye_height %f\n" % eye_height))
+		if err != Error.OK:
+			return err
 
 	err = writer.close_file()
 	if err != Error.OK:
@@ -233,21 +273,63 @@ func load_map(mapname : String) -> Dictionary:
 	var pos_x : int = -1
 	var pos_y : int = -1
 	var dir : int = -1
+	var has_fog_color_r : bool = false
+	var has_fog_color_g : bool = false
+	var has_fog_color_b : bool = false
+	var fog_color : Color = Color.BLACK
+	var fog_power : float = -1.0
+	var has_eye_height : bool = false
+	var eye_height : float = 0.5
 
 	for line in info.split('\n', false):
 		var parts : PackedStringArray = line.split(' ', true, 1)
-		if parts[0].to_lower() == "version":
+		if parts[0].to_lower() == "version" and \
+		   len(parts) > 1 and \
+		   parts[1].is_valid_int():
 			version = parts[1].to_int()
-		elif parts[0].to_lower() == "width":
+		elif parts[0].to_lower() == "width" and \
+			 len(parts) > 1 and \
+		   parts[1].is_valid_int():
 			width = parts[1].to_int()
-		elif parts[0].to_lower() == "height":
+		elif parts[0].to_lower() == "height" and \
+			 len(parts) > 1 and \
+		   parts[1].is_valid_int():
 			height = parts[1].to_int()
-		elif parts[0].to_lower() == "pos_x":
+		elif parts[0].to_lower() == "pos_x" and \
+			 len(parts) > 1 and \
+		   parts[1].is_valid_int():
 			pos_x = parts[1].to_int()
-		elif parts[0].to_lower() == "pos_y":
+		elif parts[0].to_lower() == "pos_y" and \
+			 len(parts) > 1 and \
+		   parts[1].is_valid_int():
 			pos_y = parts[1].to_int()
-		elif parts[0].to_lower() == "dir":
+		elif parts[0].to_lower() == "dir" and \
+			 len(parts) > 1 and \
+		   parts[1].is_valid_int():
 			dir = parts[1].to_int()
+		elif parts[0].to_lower() == "fog_r" and \
+			 len(parts) > 1 and \
+		   parts[1].is_valid_float():
+			fog_color.r = parts[1].to_float()
+			has_fog_color_r = true
+		elif parts[0].to_lower() == "fog_g" and \
+			 len(parts) > 1 and \
+		   parts[1].is_valid_float():
+			fog_color.g = parts[1].to_float()
+			has_fog_color_g = true
+		elif parts[0].to_lower() == "fog_b" and \
+			 len(parts) > 1 and \
+		   parts[1].is_valid_float():
+			fog_color.b = parts[1].to_float()
+			has_fog_color_b = true
+		elif parts[0].to_lower() == "fog_power" and \
+			 len(parts) > 1 and \
+		   parts[1].is_valid_float():
+			fog_power = parts[1].to_float()
+		elif parts[0].to_lower() == "eye_height" and \
+			 len(parts) > 1 and \
+		   parts[1].is_valid_float():
+			eye_height = parts[1].to_float()
 
 	if version != 0 or \
 	   (width == null or width < 1) or \
@@ -264,7 +346,23 @@ func load_map(mapname : String) -> Dictionary:
 	for layer in MAP_LAYERS:
 		terrain.set_image(layer, images[layer])
 
-	return {&'error': Error.OK, &'pos_x': pos_x, &'pos_y': pos_y, &'dir': dir}
+	var ret : Dictionary = {&'error': Error.OK}
+	if pos_x >= 0:
+		ret[&'pos_x'] = pos_x
+	if pos_y >= 0:
+		ret[&'pos_y'] = pos_y
+	if dir >= 0:
+		ret[&'dir'] = dir
+	if fog_power > 0.0:
+		ret[&'fog_power'] = fog_power
+	if has_fog_color_r and has_fog_color_g and has_fog_color_b:
+		ret[&'fog_r'] = fog_color.r
+		ret[&'fog_g'] = fog_color.g
+		ret[&'fog_b'] = fog_color.b
+	if has_eye_height:
+		ret[&'eye_height'] = eye_height
+
+	return ret
 
 # properties
 # heights
@@ -371,7 +469,7 @@ func lookup_name(mesh : int, face : int, dir : int, parameter : int) -> StringNa
 				return &'floor_side_texture_offsets'
 
 	return &''
-
+ 
 func lookup_offset(mesh : int, face : int, dir : int, topbottom : int, parameter : int) -> int:
 	if parameter == MapParameters.HEIGHT:
 		return mesh * 2 + topbottom

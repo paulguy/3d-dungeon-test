@@ -35,8 +35,9 @@ var stored : float = 0.0
 var last_mapname : String = "untitled"
 var update_status : bool = false
 
-var text_entry_cb : Callable = NO_CB
+var text_entry_prefix : String = ""
 var text_entry_text : String = ""
+var text_entry_cb : Callable = NO_CB
 
 # ceiling, floor
 var mesh : int = 0
@@ -47,7 +48,7 @@ var topbottom : int = 0
 # height, hue, bias, offset, (fog r, g, b, fog power, eye height)
 var parameter : int = 0
 
-func status(status_str : String):
+func status(status_str : String = ""):
 	if len(status_str) == 0:
 		hud_status.text = "P {},{} D {} M {} F {} T {} P {}".format([pos.x, pos.y,
 																	MapParameters.dir_string(dir),
@@ -127,7 +128,6 @@ func get_parameter() -> float:
 		return fog_power
 	elif parameter == MapParameters.EYE_HEIGHT:
 		return eye_height
-
 	return 0.0
 
 func _ready():
@@ -139,19 +139,20 @@ func _ready():
 	terrain.set_fog_power(fog_power)
 	terrain.set_pos(pos)
 	terrain.set_dir(dir)
-	status("")
+	status()
 
-func set_text_entry_mode(cb : Callable, def : String = ""):
+func set_text_entry_mode(cb : Callable, prefix : String = "", def : String = ""):
+	text_entry_prefix = prefix
 	text_entry_text = String(def)
 	text_entry_cb = cb
-	update_entry(text_entry_text)
+	update_entry()
 
 func clear_text_entry_mode():
 	text_entry_text = ""
 	text_entry_cb = NO_CB
 
-func update_entry(entry : String):
-	status(">%s" % entry)
+func update_entry():
+	status("%s>%s" % [text_entry_prefix, text_entry_text])
 
 func _input(event : InputEvent):
 	if text_entry_cb != NO_CB:
@@ -166,24 +167,27 @@ func _input(event : InputEvent):
 			elif key_event.keycode == KEY_BACKSPACE:
 				if len(text_entry_text) > 0:
 					text_entry_text = text_entry_text.substr(0, len(text_entry_text) - 1)
-					update_entry(text_entry_text)
+					update_entry()
 			else:
 				text_entry_text = "%s%c" % [text_entry_text, key_event.unicode]
-				update_entry(text_entry_text)
+				update_entry()
 
 func do_save(mapname : String):
 	last_mapname = mapname
 
-	var err : Error = terrain.save_map(mapname)
+	var err : Error = terrain.save_map(mapname,
+									   pos, dir,
+									   fog_color, fog_power,
+									   eye_height)
 	if err != Error.OK:
 		status("Save failed: %s" % error_string(err))
 	else:
 		status("Map %s saved" % mapname)
 
-func get_dict_val(dict : Dictionary, key : StringName, def : int):
+func get_dict_val(dict : Dictionary, key : StringName) -> Variant:
 	if key in dict:
 		return dict[key]
-	return def
+	return null
 
 func do_load(mapname : String):
 	last_mapname = mapname
@@ -192,13 +196,24 @@ func do_load(mapname : String):
 	if result[&'error'] != Error.OK:
 		status("Load failed: %s" % error_string(result[&'error']))
 	else:
-		var pos_x : int = get_dict_val(result, &'pos_x', -1)
-		var pos_y : int = get_dict_val(result, &'pos_y', -1)
-		var new_dir : int = get_dict_val(result, &'dir', -1)
-		if pos_x >= 0 and pos_y >= 0:
+		var pos_x = get_dict_val(result, &'pos_x')
+		var pos_y = get_dict_val(result, &'pos_y')
+		var new_dir = get_dict_val(result, &'dir')
+		var new_fog_power = get_dict_val(result, &'fog_power')
+		var fog_r = get_dict_val(result, &'fog_r')
+		var fog_g = get_dict_val(result, &'fog_g')
+		var fog_b = get_dict_val(result, &'fog_b')
+		var new_eye_height = get_dict_val(result, &'eye_height')
+		if pos_x != null and pos_y != null:
 			pos = Vector2i(pos_x, pos_y)
-		if new_dir >= 0:
+		if new_dir != null:
 			dir = new_dir
+		if new_fog_power != null:
+			fog_power = new_fog_power
+		if fog_r != null and fog_g != null and fog_b != null:
+			fog_color = Color(fog_r, fog_g, fog_b)
+		if new_eye_height != null:
+			eye_height = new_eye_height
 		status("Map %s loaded" % mapname)
 
 func do_store(num : String):
@@ -229,8 +244,6 @@ func spin(amount : int):
 		dir = 0
 
 func _process(_delta : float):
-	var status_str : String = ""
-
 	var update_pos : bool = false
 	var update_dir : bool = false
 	var change_speed : int = 1
@@ -318,14 +331,14 @@ func _process(_delta : float):
 			update_status = true
 
 		if Input.is_action_just_pressed(&'save'):
-			set_text_entry_mode(do_save, last_mapname)
+			set_text_entry_mode(do_save, "Save", last_mapname)
 
 		if Input.is_action_just_pressed(&'load'):
-			set_text_entry_mode(do_load, last_mapname)
+			set_text_entry_mode(do_load, "Load", last_mapname)
 
 		if Input.is_action_just_pressed(&'value_entry'):
-			set_text_entry_mode(do_store, str(stored))
+			set_text_entry_mode(do_store, "Value", str(stored))
 
 		if update_status:
-			status(status_str)
+			status()
 			update_status = false
