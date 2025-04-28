@@ -1,5 +1,7 @@
 extends Node3D
 
+const DEFAULT_TEXTURES : String = "res://textures.png"
+
 const MAP_VERSION : int = 0
 const MAP_LAYERS : Array[StringName] = [
 	&'face_heights',
@@ -134,8 +136,31 @@ func init_empty_world(dimensions : Vector2i):
 	for layer in MAP_LAYERS:
 		init_clear_texture(layer)
 
-func set_texture(texture):
-	terrain.set_texture(texture)
+func set_texture(texturename, reader = null, mapname = null):
+	var filename : String = "%s.png" % texturename
+	var image : Image = Image.new()
+	var err : Error
+
+	if reader != null:
+		if filename in reader.get_files():
+			err = image.load_png_from_buffer(reader.read_file())
+			if err != Error.OK:
+				# just continue...
+				print_debug("File %s exists in %s.zip but failed to load!" % [filename, mapname])
+				image = Image.new()
+
+		if image.get_data_size() == 0:
+			err = image.load("user://mods/%s/%s" % [mapname, filename])
+			if err != Error.OK:
+				image = Image.new()
+
+	if image.get_data_size() == 0:
+		err = image.load("res://%s" % filename)
+		if err != Error.OK:
+			err = image.load(DEFAULT_TEXTURES)
+			# don't bother to check, if it fails here, there's nothing more to do
+
+	terrain.set_texture(ImageTexture.create_from_image(image))
 
 func set_view(depth, fov):
 	terrain.set_view(depth, fov)
@@ -173,12 +198,23 @@ func write_image(writer : ZIPPacker, layername : StringName) -> Error:
 
 	return Error.OK
 
-func save_map(mapname : String,
+const TEMPCHARS : String = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const TEMPNUMCHARS : int = 6
+
+func make_temp_filename(template : String) -> String:
+	var tempname : String = String(template)
+	for i in TEMPNUMCHARS:
+		tempname = "%s%s" % [tempname, TEMPCHARS[randi_range(0, len(TEMPCHARS) - 1)]]
+
+	return tempname
+
+func save_map(mapname : String, textures = null,
 			  pos = null, dir = null,
 			  fog_color = null, fog_power = null,
 			  eye_height = null) -> Error:
+	var tempname : String = make_temp_filename("%s-" % mapname)
 	var writer : ZIPPacker = ZIPPacker.new()
-	var err : Error = writer.open("user://%s.zip" % mapname)
+	var err : Error = writer.open("user://%s.zip" % tempname)
 	if err != Error.OK:
 		return err
 
@@ -235,6 +271,11 @@ func save_map(mapname : String,
 		if err != Error.OK:
 			return err
 
+	if textures != null:
+		err = write_string(writer, ("textures %s\n" % textures))
+		if err != Error.OK:
+			return err
+
 	err = writer.close_file()
 	if err != Error.OK:
 		return err
@@ -243,6 +284,11 @@ func save_map(mapname : String,
 		err = write_image(writer, layer)
 		if err != Error.OK:
 			return err
+
+	writer.close()
+
+	var userdir : DirAccess = DirAccess.open("user://")
+	userdir.rename("%s.zip" % tempname, "%s.zip" % mapname)
 
 	return Error.OK
 
@@ -259,6 +305,8 @@ func load_layer(reader : ZIPReader, layername : String, loaded : Dictionary[Stri
 
 func load_map(mapname : String) -> Dictionary:
 	var pixelsize : int = Image.create_empty(1, 1, false, Image.FORMAT_RGBAF).get_data_size()
+
+	print(mapname)
 
 	var reader = ZIPReader.new()
 	var err = reader.open("user://%s.zip" % mapname)
@@ -280,6 +328,8 @@ func load_map(mapname : String) -> Dictionary:
 	var fog_power : float = -1.0
 	var has_eye_height : bool = false
 	var eye_height : float = 0.5
+	var has_textures : bool = false
+	var textures : String = ""
 
 	for line in info.split('\n', false):
 		var parts : PackedStringArray = line.split(' ', true, 1)
@@ -330,6 +380,10 @@ func load_map(mapname : String) -> Dictionary:
 			 len(parts) > 1 and \
 		   parts[1].is_valid_float():
 			eye_height = parts[1].to_float()
+		elif parts[0].to_lower() == "textures" and \
+			 len(parts) > 1:
+			textures = parts[1]
+			has_textures = true
 
 	if version != 0 or \
 	   (width == null or width < 1) or \
@@ -347,20 +401,30 @@ func load_map(mapname : String) -> Dictionary:
 		terrain.set_image(layer, images[layer])
 
 	var ret : Dictionary = {&'error': Error.OK}
-	if pos_x >= 0:
+	if pos_x >= 0 and pos_y >= 0:
 		ret[&'pos_x'] = pos_x
-	if pos_y >= 0:
 		ret[&'pos_y'] = pos_y
+		set_pos(Vector2i(pos_x, pos_y))
 	if dir >= 0:
 		ret[&'dir'] = dir
+		set_dir(dir)
 	if fog_power > 0.0:
 		ret[&'fog_power'] = fog_power
+		set_fog_power(fog_power)
 	if has_fog_color_r and has_fog_color_g and has_fog_color_b:
 		ret[&'fog_r'] = fog_color.r
 		ret[&'fog_g'] = fog_color.g
 		ret[&'fog_b'] = fog_color.b
+		set_fog_color(fog_color)
 	if has_eye_height:
 		ret[&'eye_height'] = eye_height
+		set_eye_height(eye_height)
+	if has_textures:
+		ret[&'textures'] = textures
+		print(mapname)
+		set_texture(textures, reader, mapname)
+
+	reader.close()
 
 	return ret
 

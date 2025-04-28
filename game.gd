@@ -13,13 +13,13 @@ var world_width : int = 128
 var world_height : int = 128
 var fog_power : float = 0.5
 var fog_color : Color = Color(0.0, 0.0, 0.0)
+var textures : String = "textures"
 
 const CHANGE_SPEEDS : Array[Array] = [
 	[0.01, 0.1, 1.0],
 	[0.01, 0.1, 1.0],
 	[0.01, 0.1, 1.0],
 	[1.0/64.0, 1.0/8.0, 1.0],
-	[0.01, 0.1, 1.0],
 	[0.01, 0.1, 1.0],
 	[0.01, 0.1, 1.0],
 	[0.01, 0.1, 1.0],
@@ -90,9 +90,6 @@ func change_parameter(amount : float):
 	elif parameter == MapParameters.FOG_POWER:
 		fog_power += amount
 		terrain.set_fog_power(fog_power)
-	elif parameter == MapParameters.EYE_HEIGHT:
-		eye_height += amount
-		terrain.set_eye_height(eye_height)
 
 func set_parameter(val : float):
 	var p : Vector2i = get_facing_pos()
@@ -110,9 +107,6 @@ func set_parameter(val : float):
 	elif parameter == MapParameters.FOG_POWER:
 		fog_power = val
 		terrain.set_fog_power(fog_power)
-	elif parameter == MapParameters.EYE_HEIGHT:
-		eye_height = val
-		terrain.set_eye_height(eye_height)
 
 func get_parameter() -> float:
 	var p : Vector2i = get_facing_pos()
@@ -126,12 +120,10 @@ func get_parameter() -> float:
 		return fog_color.b
 	elif parameter == MapParameters.FOG_POWER:
 		return fog_power
-	elif parameter == MapParameters.EYE_HEIGHT:
-		return eye_height
 	return 0.0
 
 func _ready():
-	terrain.set_texture(load("res://textures.png"))
+	terrain.set_texture(textures)
 	terrain.set_view(view_depth, $'Camera3D'.fov)
 	terrain.init_empty_world(Vector2i(world_width, world_height))
 	terrain.set_eye_height(eye_height)
@@ -175,7 +167,7 @@ func _input(event : InputEvent):
 func do_save(mapname : String):
 	last_mapname = mapname
 
-	var err : Error = terrain.save_map(mapname,
+	var err : Error = terrain.save_map(mapname, textures,
 									   pos, dir,
 									   fog_color, fog_power,
 									   eye_height)
@@ -246,6 +238,7 @@ func spin(amount : int):
 func _process(_delta : float):
 	var update_pos : bool = false
 	var update_dir : bool = false
+	var update_eye_height : bool = false
 	var change_speed : int = 1
 
 	if text_entry_cb == NO_CB:
@@ -338,6 +331,17 @@ func _process(_delta : float):
 
 		if Input.is_action_just_pressed(&'value_entry'):
 			set_text_entry_mode(do_store, "Value", str(stored))
+
+		if Input.is_action_just_pressed(&'up'):
+			eye_height += pow(10.0, change_speed - 2)
+			update_eye_height = true
+
+		if Input.is_action_just_pressed(&'down'):
+			eye_height -= pow(10.0, change_speed - 2)
+			update_eye_height = true
+
+		if update_eye_height:
+			terrain.set_eye_height(eye_height)
 
 		if update_status:
 			status()
