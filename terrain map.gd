@@ -155,12 +155,9 @@ func set_texture(texturename, reader = null, mapname = null):
 				image = Image.new()
 
 	if image.get_data_size() == 0:
-		err = image.load("res://%s" % filename)
-		if err != Error.OK:
-			err = image.load(DEFAULT_TEXTURES)
-			# don't bother to check, if it fails here, there's nothing more to do
-
-	terrain.set_texture(ImageTexture.create_from_image(image))
+		terrain.set_texture(load("res://%s" % filename))
+	else:
+		terrain.set_texture(ImageTexture.create_from_image(image))
 
 func set_view(depth, fov):
 	terrain.set_view(depth, fov)

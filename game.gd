@@ -32,6 +32,12 @@ func NO_CB(_s : String):
 var pos : Vector2i = Vector2i(world_width / 2, world_height / 2)
 var dir : int = 0
 var stored : float = 0.0
+var stored_heights : Array[float] = [2.0, 1.0, 0.0, -1.0]
+# top hue, top bias, bottom hue, bottom bias, offset
+var stored_ceiling : Array[float] = [0.0, 1.0, 0.0, 1.0, 0.0]
+var stored_floor : Array[float] = [0.0, 1.0, 0.0, 1.0, 0.0]
+# hue, bias, offset
+var stored_face : Array[float] = [0.0, 1.0, 0.0]
 var last_mapname : String = "untitled"
 var update_status : bool = false
 
@@ -91,34 +97,62 @@ func change_parameter(amount : float):
 		fog_power += amount
 		terrain.set_fog_power(fog_power)
 
-func set_parameter(val : float):
-	var p : Vector2i = get_facing_pos()
-	if parameter <= MapParameters.GEOMETRY_PARAMETERS_MAX:
-		terrain.set_val(mesh, face, dir, topbottom, parameter, val, p)
-	elif parameter == MapParameters.FOG_COLOR_R:
+func set_parameter(val : float, m : int = -1, f : int = -1, t : int = -1, p : int = -1):
+	var fp : Vector2i = get_facing_pos()
+
+	var r_mesh : int = mesh
+	var r_face : int = face
+	var r_tb : int = topbottom
+	var r_param : int = parameter
+	if m >= 0:
+		r_mesh = m
+	if f >= 0:
+		r_face = f
+	if t >= 0:
+		r_tb = t
+	if p >= 0:
+		r_param = p
+
+	if r_param <= MapParameters.GEOMETRY_PARAMETERS_MAX:
+		terrain.set_val(r_mesh, r_face, dir, r_tb, r_param, val, fp)
+	elif r_param == MapParameters.FOG_COLOR_R:
 		fog_color.r = val
 		set_fog_color()
-	elif parameter == MapParameters.FOG_COLOR_G:
+	elif r_param == MapParameters.FOG_COLOR_G:
 		fog_color.g = val
 		set_fog_color()
-	elif parameter == MapParameters.FOG_COLOR_B:
+	elif r_param == MapParameters.FOG_COLOR_B:
 		fog_color.b = val
 		set_fog_color()
-	elif parameter == MapParameters.FOG_POWER:
+	elif r_param == MapParameters.FOG_POWER:
 		fog_power = val
 		terrain.set_fog_power(fog_power)
 
-func get_parameter() -> float:
-	var p : Vector2i = get_facing_pos()
-	if parameter <= MapParameters.GEOMETRY_PARAMETERS_MAX:
-		return terrain.get_val(mesh, face, dir, topbottom, parameter, p)
-	elif parameter == MapParameters.FOG_COLOR_R:
+func get_parameter(m : int = -1, f : int = -1, t : int = -1, p : int = -1) -> float:
+	var fp : Vector2i = get_facing_pos()
+
+	var r_mesh : int = mesh
+	var r_face : int = face
+	var r_tb : int = topbottom
+	var r_param : int = parameter
+	if m >= 0:
+		r_mesh = m
+	if f >= 0:
+		r_face = f
+	if t >= 0:
+		r_tb = t
+	if p >= 0:
+		r_param = p
+
+	if r_param <= MapParameters.GEOMETRY_PARAMETERS_MAX:
+		return terrain.get_val(r_mesh, r_face, dir, r_tb, r_param, fp)
+	elif r_param == MapParameters.FOG_COLOR_R:
 		return fog_color.r
-	elif parameter == MapParameters.FOG_COLOR_G:
+	elif r_param == MapParameters.FOG_COLOR_G:
 		return fog_color.g
-	elif parameter == MapParameters.FOG_COLOR_B:
+	elif r_param == MapParameters.FOG_COLOR_B:
 		return fog_color.b
-	elif parameter == MapParameters.FOG_POWER:
+	elif r_param == MapParameters.FOG_POWER:
 		return fog_power
 	return 0.0
 
@@ -240,8 +274,12 @@ func _process(_delta : float):
 	var update_dir : bool = false
 	var update_eye_height : bool = false
 	var change_speed : int = 1
+	var alternate : bool = false
 
 	if text_entry_cb == NO_CB:
+		if Input.is_action_pressed(&'alternate function'):
+			alternate = true
+
 		if Input.is_action_pressed(&'slower'):
 			change_speed -= 1
 
@@ -302,9 +340,14 @@ func _process(_delta : float):
 			update_status = true
 
 		if Input.is_action_just_pressed(&'cycle parameter'):
-			parameter += 1
-			if parameter == MapParameters.MAX_PARAMETER:
-				parameter = 0
+			if alternate:
+				parameter -= 1
+				if parameter < 0:
+					parameter = MapParameters.MAX_PARAMETER - 1
+			else:
+				parameter += 1
+				if parameter >= MapParameters.MAX_PARAMETER:
+					parameter = 0
 			update_status = true
 
 		if Input.is_action_just_pressed(&'inc parameter'):
@@ -315,13 +358,72 @@ func _process(_delta : float):
 			change_parameter(-CHANGE_SPEEDS[parameter][change_speed])
 			update_status = true
 
-		if Input.is_action_just_pressed(&'get value'):
-			stored = get_parameter()
-			update_status = true
+		if Input.is_action_just_pressed(&'value'):
+			if alternate:
+				set_parameter(stored)
+				status("Value applied.")
+			else:
+				stored = get_parameter()
+				status("Value stored.")
 
-		if Input.is_action_just_pressed(&'put value'):
-			set_parameter(stored)
-			update_status = true
+		if Input.is_action_just_pressed(&'ceiling'):
+			if alternate:
+				set_parameter(stored_ceiling[0], MapParameters.CEILING, MapParameters.WALL, MapParameters.TOP, MapParameters.HUE)
+				set_parameter(stored_ceiling[1], MapParameters.CEILING, MapParameters.WALL, MapParameters.TOP, MapParameters.BIAS)
+				set_parameter(stored_ceiling[2], MapParameters.CEILING, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.HUE)
+				set_parameter(stored_ceiling[3], MapParameters.CEILING, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.BIAS)
+				set_parameter(stored_ceiling[4], MapParameters.CEILING, MapParameters.WALL, MapParameters.TOP, MapParameters.OFFSET)
+				status("Ceiling wall parameters applied.")
+			else:
+				stored_ceiling = [get_parameter(MapParameters.CEILING, MapParameters.WALL, MapParameters.TOP, MapParameters.HUE),
+								  get_parameter(MapParameters.CEILING, MapParameters.WALL, MapParameters.TOP, MapParameters.BIAS),
+								  get_parameter(MapParameters.CEILING, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.HUE),
+								  get_parameter(MapParameters.CEILING, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.BIAS),
+								  get_parameter(MapParameters.CEILING, MapParameters.WALL, MapParameters.TOP, MapParameters.OFFSET)]
+				status("Ceiling wall parameters stored.")
+
+		if Input.is_action_just_pressed(&'face'):
+			# topbottom only matters for offset but for consistency...
+			if alternate:
+				set_parameter(stored_face[0], mesh, MapParameters.HORIZ, topbottom, MapParameters.HUE)
+				set_parameter(stored_face[1], mesh, MapParameters.HORIZ, topbottom, MapParameters.BIAS)
+				set_parameter(stored_face[2], mesh, MapParameters.HORIZ, topbottom, MapParameters.OFFSET)
+				status("Face parameters applied.")
+			else:
+				stored_face = [get_parameter(mesh, MapParameters.HORIZ, topbottom, MapParameters.HUE),
+							   get_parameter(mesh, MapParameters.HORIZ, topbottom, MapParameters.BIAS),
+							   get_parameter(mesh, MapParameters.HORIZ, topbottom, MapParameters.OFFSET)]
+				status("Face parameters stored.")
+
+		if Input.is_action_just_pressed(&"floor"):
+			if alternate:
+				set_parameter(stored_floor[0], MapParameters.FLOOR, MapParameters.WALL, MapParameters.TOP, MapParameters.HUE)
+				set_parameter(stored_floor[1], MapParameters.FLOOR, MapParameters.WALL, MapParameters.TOP, MapParameters.BIAS)
+				set_parameter(stored_floor[2], MapParameters.FLOOR, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.HUE)
+				set_parameter(stored_floor[3], MapParameters.FLOOR, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.BIAS)
+				set_parameter(stored_floor[4], MapParameters.FLOOR, MapParameters.WALL, MapParameters.TOP, MapParameters.OFFSET)
+				status("Floor wall parameters applied.")
+			else:
+				stored_floor = [get_parameter(MapParameters.FLOOR, MapParameters.WALL, MapParameters.TOP, MapParameters.HUE),
+								get_parameter(MapParameters.FLOOR, MapParameters.WALL, MapParameters.TOP, MapParameters.BIAS),
+								get_parameter(MapParameters.FLOOR, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.HUE),
+								get_parameter(MapParameters.FLOOR, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.BIAS),
+								get_parameter(MapParameters.FLOOR, MapParameters.WALL, MapParameters.TOP, MapParameters.OFFSET)]
+				status("Floor wall parameters stored.")
+
+		if Input.is_action_just_pressed(&'heights'):
+			if alternate:
+				set_parameter(stored_heights[0], MapParameters.CEILING, MapParameters.HORIZ, MapParameters.TOP, MapParameters.HEIGHT)
+				set_parameter(stored_heights[1], MapParameters.CEILING, MapParameters.HORIZ, MapParameters.BOTTOM, MapParameters.HEIGHT)
+				set_parameter(stored_heights[2], MapParameters.FLOOR, MapParameters.HORIZ, MapParameters.TOP, MapParameters.HEIGHT)
+				set_parameter(stored_heights[3], MapParameters.FLOOR, MapParameters.HORIZ, MapParameters.BOTTOM, MapParameters.HEIGHT)
+				status("Cell heights applied.")
+			else:
+				stored_heights = [get_parameter(MapParameters.CEILING, MapParameters.HORIZ, MapParameters.TOP, MapParameters.HEIGHT),
+								  get_parameter(MapParameters.CEILING, MapParameters.HORIZ, MapParameters.BOTTOM, MapParameters.HEIGHT),
+								  get_parameter(MapParameters.FLOOR, MapParameters.HORIZ, MapParameters.TOP, MapParameters.HEIGHT),
+								  get_parameter(MapParameters.FLOOR, MapParameters.HORIZ, MapParameters.BOTTOM, MapParameters.HEIGHT)]
+				status("Cell heights stored.")
 
 		if Input.is_action_just_pressed(&'save'):
 			set_text_entry_mode(do_save, "Save", last_mapname)
