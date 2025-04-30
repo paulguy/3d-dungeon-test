@@ -303,8 +303,6 @@ func load_layer(reader : ZIPReader, layername : String, loaded : Dictionary[Stri
 func load_map(mapname : String) -> Dictionary:
 	var pixelsize : int = Image.create_empty(1, 1, false, Image.FORMAT_RGBAF).get_data_size()
 
-	print(mapname)
-
 	var reader = ZIPReader.new()
 	var err = reader.open("user://%s.zip" % mapname)
 	if err != OK:
@@ -418,7 +416,6 @@ func load_map(mapname : String) -> Dictionary:
 		set_eye_height(eye_height)
 	if has_textures:
 		ret[&'textures'] = textures
-		print(mapname)
 		set_texture(textures, reader, mapname)
 
 	reader.close()
