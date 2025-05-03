@@ -1,14 +1,21 @@
 extends Node3D
 
-# TODO: copy/paste face
-#       that ugly stripe along left of center (worked around with 2x MSAA, not "fixed")
+# TODO: that ugly stripe along left of center (worked around with 2x MSAA, not "fixed")
 #       box select/operations
+
+const DEFAULT_EYE_HEIGHT : float = 0.5
+const PLAYER_HEIGHT : float = 0.8
+const CLIMB_HEIGHT : float = 0.5
+const FIT_HEIGHT : float = 0.4
+const GRAVITY : float = 0.8
 
 @onready var terrain : Node3D = $'Terrain Map'
 @onready var hud_status : Label = $'HUD/Status'
 
+var play_mode : bool = false
+
 var view_depth : int = 49
-var eye_height : float = 0.5
+var eye_height : float = DEFAULT_EYE_HEIGHT
 var world_width : int = 128
 var world_height : int = 128
 var fog_power : float = 0.5
@@ -45,6 +52,12 @@ var text_entry_prefix : String = ""
 var text_entry_text : String = ""
 var text_entry_cb : Callable = NO_CB
 
+var play_pos : Vector2i = Vector2i.ZERO
+var play_dir : int = 0
+var play_height : float = 0.0
+var floor_height : float = 0.0
+var play_fall_vel : float = 0.0
+
 # ceiling, floor
 var mesh : int = 0
 # horiz, wall
@@ -64,6 +77,12 @@ func status(status_str : String = ""):
 																	MapParameters.parameter_string(parameter)], "{}")
 	else:
 		hud_status.text = status_str
+
+func status_visibility(v : bool):
+	if v:
+		hud_status.visible = true
+	else:
+		hud_status.visible = false
 
 func set_fog_color():
 	$'WorldEnvironment'.environment.background_color = fog_color
@@ -128,8 +147,9 @@ func set_parameter(val : float, m : int = -1, f : int = -1, t : int = -1, p : in
 		fog_power = val
 		terrain.set_fog_power(fog_power)
 
-func get_parameter(m : int = -1, f : int = -1, t : int = -1, p : int = -1) -> float:
-	var fp : Vector2i = get_facing_pos()
+func get_parameter(m : int = -1, f : int = -1, t : int = -1, p : int = -1, d_pos = null) -> float:
+	if d_pos == null:
+		d_pos = get_facing_pos()
 
 	var r_mesh : int = mesh
 	var r_face : int = face
@@ -145,7 +165,7 @@ func get_parameter(m : int = -1, f : int = -1, t : int = -1, p : int = -1) -> fl
 		r_param = p
 
 	if r_param <= MapParameters.GEOMETRY_PARAMETERS_MAX:
-		return terrain.get_val(r_mesh, r_face, dir, r_tb, r_param, fp)
+		return terrain.get_val(r_mesh, r_face, dir, r_tb, r_param, d_pos)
 	elif r_param == MapParameters.FOG_COLOR_R:
 		return fog_color.r
 	elif r_param == MapParameters.FOG_COLOR_G:
@@ -155,17 +175,6 @@ func get_parameter(m : int = -1, f : int = -1, t : int = -1, p : int = -1) -> fl
 	elif r_param == MapParameters.FOG_POWER:
 		return fog_power
 	return 0.0
-
-func _ready():
-	terrain.set_texture(textures)
-	terrain.set_view(view_depth, $'Camera3D'.fov)
-	terrain.init_empty_world(Vector2i(world_width, world_height))
-	terrain.set_eye_height(eye_height)
-	set_fog_color()
-	terrain.set_fog_power(fog_power)
-	terrain.set_pos(pos)
-	terrain.set_dir(dir)
-	status()
 
 func set_text_entry_mode(cb : Callable, prefix : String = "", def : String = ""):
 	text_entry_prefix = prefix
@@ -246,20 +255,65 @@ func do_store(num : String):
 	if num.is_valid_float():
 		stored = num.to_float()
 
-func move(f_amount : int, s_amount : int = 0):
+func phys_move(d_pos : Vector2i):
+	var d_heights : Array[float] = [get_parameter(MapParameters.CEILING,
+												  MapParameters.HORIZ,
+												  MapParameters.TOP,
+												  MapParameters.HEIGHT,
+												  d_pos),
+									get_parameter(MapParameters.CEILING,
+												  MapParameters.HORIZ,
+												  MapParameters.BOTTOM,
+												  MapParameters.HEIGHT,
+												  d_pos),
+									get_parameter(MapParameters.FLOOR,
+												  MapParameters.HORIZ,
+												  MapParameters.TOP,
+												  MapParameters.HEIGHT,
+												  d_pos),
+									get_parameter(MapParameters.FLOOR,
+												  MapParameters.HORIZ,
+												  MapParameters.BOTTOM,
+												  MapParameters.HEIGHT,
+												  d_pos)]
+	# get the destination spot floor height, and whether the player can even traverse to it
+	var d_floor = -1
+	if play_height > d_heights[0] - CLIMB_HEIGHT:
+		d_floor = 0
+	elif play_height > d_heights[2] - CLIMB_HEIGHT and \
+		 d_heights[1] - d_heights[2] > FIT_HEIGHT:
+		d_floor = 2
+
+	if d_floor >= 0:
+		floor_height = d_heights[d_floor]
+		if play_height < floor_height:
+			# if player is coming from a lower level, climb up
+			play_height = floor_height
+		pos = d_pos
+
+		terrain.set_eye_height(play_height + DEFAULT_EYE_HEIGHT)
+
+func move(f_amount : int, s_amount : int = 0, physics : bool = false):
+	var d_pos : Vector2i = pos
+
 	match dir:
 		MapParameters.NORTH:
-			pos.y -= f_amount
-			pos.x += s_amount
+			d_pos.y -= f_amount
+			d_pos.x += s_amount
 		MapParameters.EAST:
-			pos.x += f_amount
-			pos.y += s_amount
+			d_pos.x += f_amount
+			d_pos.y += s_amount
 		MapParameters.SOUTH:
-			pos.y += f_amount
-			pos.x -= s_amount
+			d_pos.y += f_amount
+			d_pos.x -= s_amount
 		_: # west
-			pos.x -= f_amount
-			pos.y -= s_amount
+			d_pos.x -= f_amount
+			d_pos.y -= s_amount
+
+	if physics:
+		phys_move(d_pos)
+	else:
+		pos = d_pos
 
 func spin(amount : int):
 	dir += amount
@@ -269,7 +323,7 @@ func spin(amount : int):
 	elif dir > 3:
 		dir = 0
 
-func _process(_delta : float):
+func editor_process():
 	var update_pos : bool = false
 	var update_dir : bool = false
 	var update_eye_height : bool = false
@@ -277,6 +331,18 @@ func _process(_delta : float):
 	var alternate : bool = false
 
 	if text_entry_cb == NO_CB:
+		if Input.is_action_pressed(&'play'):
+			play_mode = true
+			play_dir = dir
+			play_pos = pos
+			play_height = get_parameter(MapParameters.FLOOR,
+										MapParameters.HORIZ,
+										MapParameters.TOP,
+										MapParameters.HEIGHT,
+										pos)
+			status_visibility(false)
+			return
+
 		if Input.is_action_pressed(&'alternate function'):
 			alternate = true
 
@@ -312,6 +378,7 @@ func _process(_delta : float):
 
 		if update_pos:
 			terrain.set_pos(pos)
+			update_eye_height = true
 			update_status = true
 
 		if update_dir:
@@ -443,8 +510,74 @@ func _process(_delta : float):
 			update_eye_height = true
 
 		if update_eye_height:
-			terrain.set_eye_height(eye_height)
+			terrain.set_eye_height(get_parameter(MapParameters.FLOOR,
+												 MapParameters.HORIZ,
+												 MapParameters.TOP,
+												 MapParameters.HEIGHT,
+												 pos) + eye_height)
 
 		if update_status:
 			status()
 			update_status = false
+
+func play_process(delta : float):
+	var update_pos : bool = false
+	var update_dir : bool = false
+
+	if play_height > floor_height:
+		play_fall_vel += GRAVITY * delta
+		play_height -= play_fall_vel * delta
+		if play_height <= floor_height:
+			play_height = floor_height
+			play_fall_vel = 0.0
+
+		terrain.set_eye_height(play_height + DEFAULT_EYE_HEIGHT)
+	else:
+		if Input.is_action_just_pressed(&'forward'):
+			move(1, 0, true)
+			update_pos = true
+
+		if Input.is_action_just_pressed(&'back'):
+			move(-1, 0, true)
+			update_pos = true
+
+		if Input.is_action_just_pressed(&'strafe left'):
+			move(0, -1, true)
+			update_pos = true
+
+		if Input.is_action_just_pressed(&'strafe right'):
+			move(0, 1, true)
+			update_pos = true
+
+		if Input.is_action_just_pressed(&'turn left'):
+			spin(-1)
+			update_dir = true
+
+		if Input.is_action_just_pressed(&'turn right'):
+			spin(1)
+			update_dir = true
+
+		if update_pos:
+			terrain.set_pos(pos)
+			update_status = true
+
+		if update_dir:
+			terrain.set_dir(dir)
+			update_status = true
+
+func _ready():
+	terrain.set_texture(textures)
+	terrain.set_view(view_depth, $'Camera3D'.fov)
+	terrain.init_empty_world(Vector2i(world_width, world_height))
+	terrain.set_eye_height(eye_height)
+	set_fog_color()
+	terrain.set_fog_power(fog_power)
+	terrain.set_pos(pos)
+	terrain.set_dir(dir)
+	status()
+
+func _process(delta : float):
+	if play_mode:
+		play_process(delta)
+	else:
+		editor_process()

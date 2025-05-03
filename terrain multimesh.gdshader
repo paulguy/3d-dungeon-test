@@ -263,7 +263,7 @@ void vertex() {
 	VERTEX.y = ((top_vert * fceiling_mesh) * mesh_face_heights.r) +
 			   ((bottom_vert * fceiling_mesh) * mesh_face_heights.g) +
 			   ((top_vert * ffloor_mesh) * mesh_face_heights.b) +
-			   ((bottom_vert * ffloor_mesh) * mesh_face_heights.a) - view_height - eye_height;
+			   ((bottom_vert * ffloor_mesh) * mesh_face_heights.a) - eye_height;
 	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	NORMAL = normalize((MODELVIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	BINORMAL = normalize((MODELVIEW_MATRIX * vec4(BINORMAL, 0.0)).xyz);
