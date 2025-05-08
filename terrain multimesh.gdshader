@@ -59,7 +59,7 @@ vec3 hue2rgb(float val, float bias) {
 	// bias below 1.0 should darken, bias above 1.0 should "desaturate"
 	return vec3(1.0 - (((clamp(val, 0.33, 0.49) - 0.33) - (max(val, 0.84) - 0.84)) / 0.16),
 				1.0 - ((min(val, 0.16) - (clamp(val, 0.16, 0.32) - 0.16)) / 0.16) - ((clamp(val, 0.67, 0.83) - 0.67) / 0.16),
-				1.0 - ((min(val, 0.16) - (clamp(val, 0.49, 0.67) - 0.49)) / 0.16)) * max(bias, 1.0) + (bias - 1.0);
+				1.0 - ((min(val, 0.16) - (clamp(val, 0.49, 0.67) - 0.49)) / 0.16)) * max(bias, 1.0) + min(bias - 1.0, 0.0);
 }
 
 void vertex() {

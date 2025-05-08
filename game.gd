@@ -16,6 +16,7 @@ var play_mode : bool = false
 
 var view_depth : int = 49
 var eye_height : float = DEFAULT_EYE_HEIGHT
+var ceiling_attach : bool = false
 var world_width : int = 128
 var world_height : int = 128
 var fog_power : float = 0.5
@@ -52,8 +53,6 @@ var text_entry_prefix : String = ""
 var text_entry_text : String = ""
 var text_entry_cb : Callable = NO_CB
 
-var play_pos : Vector2i = Vector2i.ZERO
-var play_dir : int = 0
 var play_height : float = 0.0
 var floor_height : float = 0.0
 var play_fall_vel : float = 0.0
@@ -256,6 +255,26 @@ func do_store(num : String):
 		stored = num.to_float()
 
 func phys_move(d_pos : Vector2i):
+	var heights : Array[float] = [get_parameter(MapParameters.CEILING,
+												MapParameters.HORIZ,
+												MapParameters.TOP,
+												MapParameters.HEIGHT,
+												pos),
+								  get_parameter(MapParameters.CEILING,
+												MapParameters.HORIZ,
+												MapParameters.BOTTOM,
+												MapParameters.HEIGHT,
+												pos),
+								  get_parameter(MapParameters.FLOOR,
+												MapParameters.HORIZ,
+												MapParameters.TOP,
+												MapParameters.HEIGHT,
+												pos),
+								  get_parameter(MapParameters.FLOOR,
+												MapParameters.HORIZ,
+												MapParameters.BOTTOM,
+												MapParameters.HEIGHT,
+												pos)]
 	var d_heights : Array[float] = [get_parameter(MapParameters.CEILING,
 												  MapParameters.HORIZ,
 												  MapParameters.TOP,
@@ -281,7 +300,13 @@ func phys_move(d_pos : Vector2i):
 	if play_height > d_heights[0] - CLIMB_HEIGHT:
 		d_floor = 0
 	elif play_height > d_heights[2] - CLIMB_HEIGHT and \
-		 d_heights[1] - d_heights[2] > FIT_HEIGHT:
+		 d_heights[1] - d_heights[2] > FIT_HEIGHT and \
+		 heights[1] - d_heights[2] > FIT_HEIGHT and \
+		 play_height - d_heights[1] > FIT_HEIGHT:
+		 # can climb up
+		 # can fit in the destination space
+		 # can fit through the space between the current ceiling and destination floor
+		 # can fit through the space between the current floor and destination ceiling
 		d_floor = 2
 
 	if d_floor >= 0:
@@ -331,20 +356,19 @@ func editor_process():
 	var alternate : bool = false
 
 	if text_entry_cb == NO_CB:
-		if Input.is_action_pressed(&'play'):
+		if Input.is_action_pressed(&'alternate function'):
+			alternate = true
+
+		if Input.is_action_just_pressed(&'play'):
 			play_mode = true
-			play_dir = dir
-			play_pos = pos
-			play_height = get_parameter(MapParameters.FLOOR,
+			floor_height = get_parameter(MapParameters.FLOOR,
 										MapParameters.HORIZ,
 										MapParameters.TOP,
 										MapParameters.HEIGHT,
 										pos)
+			play_height = floor_height
 			status_visibility(false)
 			return
-
-		if Input.is_action_pressed(&'alternate function'):
-			alternate = true
 
 		if Input.is_action_pressed(&'slower'):
 			change_speed -= 1
@@ -502,19 +526,48 @@ func editor_process():
 			set_text_entry_mode(do_store, "Value", str(stored))
 
 		if Input.is_action_just_pressed(&'up'):
-			eye_height += pow(10.0, change_speed - 2)
+			if ceiling_attach:
+				eye_height -= pow(10.0, change_speed - 2)
+			else:
+				eye_height += pow(10.0, change_speed - 2)
 			update_eye_height = true
 
 		if Input.is_action_just_pressed(&'down'):
-			eye_height -= pow(10.0, change_speed - 2)
+			if ceiling_attach:
+				eye_height += pow(10.0, change_speed - 2)
+			else:
+				eye_height -= pow(10.0, change_speed - 2)
+			update_eye_height = true
+
+		if Input.is_action_just_pressed(&'view attach toggle'):
+			var f_height : float = get_parameter(MapParameters.FLOOR,
+												MapParameters.HORIZ,
+												MapParameters.TOP,
+												MapParameters.HEIGHT,
+												pos)
+			var c_height : float = get_parameter(MapParameters.CEILING,
+												MapParameters.HORIZ,
+												MapParameters.BOTTOM,
+												MapParameters.HEIGHT,
+												pos)
+
+			eye_height = c_height - f_height - eye_height
+			ceiling_attach = not ceiling_attach
 			update_eye_height = true
 
 		if update_eye_height:
-			terrain.set_eye_height(get_parameter(MapParameters.FLOOR,
-												 MapParameters.HORIZ,
-												 MapParameters.TOP,
-												 MapParameters.HEIGHT,
-												 pos) + eye_height)
+			if ceiling_attach:
+				terrain.set_eye_height(get_parameter(MapParameters.CEILING,
+													 MapParameters.HORIZ,
+													 MapParameters.BOTTOM,
+													 MapParameters.HEIGHT,
+													 pos) - eye_height)
+			else:
+				terrain.set_eye_height(get_parameter(MapParameters.FLOOR,
+													 MapParameters.HORIZ,
+													 MapParameters.TOP,
+													 MapParameters.HEIGHT,
+													 pos) + eye_height)
 
 		if update_status:
 			status()
@@ -523,6 +576,11 @@ func editor_process():
 func play_process(delta : float):
 	var update_pos : bool = false
 	var update_dir : bool = false
+
+	if Input.is_action_just_pressed(&'play'):
+		play_mode = false
+		status_visibility(true)
+		return
 
 	if play_height > floor_height:
 		play_fall_vel += GRAVITY * delta
