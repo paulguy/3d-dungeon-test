@@ -1,14 +1,34 @@
-Controls:
+3D Dungeon Test
+===============
 
-General:
+Description
+-----------
+This is a visual test/demonstration/mockup of those 4 directional 3D
+perspective dungeon crawler style games, except this does actually use 3D
+because that's just easier and more efficient on modern computers.  It also
+supports tinting surfaces and blending between the top and bottom of wall
+textures, as well as variable height ceilings and floors.
+
+Screenshots
+-----------
+![Screenshot 1](screen1.png)
+![Screenshot 2](screen2.png)
+![Screenshot 3](screen3.png)
+![Screenshot 4](screen4.png)
+![Screenshot 5](screen5.png)
+
+Controls
+--------
+### General
 W, S, A, D - move forward/back, strafe left/right
 Q, E - turn counter clockwise/clockwise
 F6 - Toggle play/edit mode
 
-Play:
+### Play
 no additional controls
 
-Editor:
+### Editor
+```
 Shift - fast modify value, alternate function
 Ctrl - slow modify value
 Z, X - Raise and lower view height, normally 1/10 of a block.  Holding shift
@@ -61,3 +81,4 @@ F5 - Save map data to file.  A prompt for a name will come up.  It will be
      saved to this game's user storage location.
 F8 - Load map data from file.  A prompt for a name will come up.  It loads
      from this game's user storage location.
+```
