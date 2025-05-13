@@ -11,18 +11,20 @@ textures, as well as variable height ceilings and floors.
 
 Screenshots
 -----------
-![Screenshot 1](screen1.png)
-![Screenshot 2](screen2.png)
-![Screenshot 3](screen3.png)
-![Screenshot 4](screen4.png)
-![Screenshot 5](screen5.png)
+![Screenshot 1](readme-assets/screen1.png)
+![Screenshot 2](readme-assets/screen2.png)
+![Screenshot 3](readme-assets/screen3.png)
+![Screenshot 4](readme-assets/screen4.png)
+![Screenshot 5](readme-assets/screen5.png)
 
 Controls
 --------
 ### General
+```
 W, S, A, D - move forward/back, strafe left/right
 Q, E - turn counter clockwise/clockwise
 F6 - Toggle play/edit mode
+```
 
 ### Play
 no additional controls
