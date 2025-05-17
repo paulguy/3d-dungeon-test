@@ -9,14 +9,24 @@ const CLIMB_HEIGHT : float = 0.5
 const FIT_HEIGHT : float = 0.4
 const GRAVITY : float = 0.8
 
+const PROPS_DIR : String = "props"
+
 @onready var terrain : Node3D = $'Terrain Map'
 @onready var hud_status : Label = $'HUD/Status'
+@onready var props : PropsManager = $'Props'
 
 enum RunMode {
 	TERRAIN,
 	PROPS,
 	EVENTS,
 	PLAY
+}
+
+var MODE_FUNCS : Dictionary[RunMode, Callable] = {
+	RunMode.TERRAIN: terrain_process,
+	RunMode.PROPS: props_process,
+	RunMode.EVENTS: events_process,
+	RunMode.PLAY: play_process
 }
 
 var view_depth : int = 49
@@ -72,17 +82,117 @@ var topbottom : int = 0
 # height, hue, bias, offset, (fog r, g, b, fog power, eye height)
 var parameter : int = 0
 
+var respropdefs : Dictionary
+var userpropdefs : Dictionary
+var propdefs : Dictionary[StringName, PropDef]
+var propnames : Array[StringName]
+var selected_pdef : int = -1
+var selected_prop : int = -1
+
 var status_set : bool = false
 var status_str : String
 
+func add_prop(p : Dictionary[String, PropDef], pname : String, source : String, image : Texture2D):
+	pname = StringName(pname.get_basename())
+	p[pname] = PropDef.new(pname, source, image)
+
+func scan_props_dir(source : String, path : String):
+	var p : Dictionary[String, PropDef] = {}
+	var err : Error
+	var image : Image
+
+	if source == 'map':
+		# map zip
+		var zipfile : ZIPReader = ZIPReader.new()
+		err = zipfile.open(path)
+		if err != Error.OK:
+			return {}
+		for filename in zipfile.get_files():
+			if filename.get_base_dir() == PROPS_DIR and \
+			   filename.get_extension().to_lower() == 'png':
+				image = Image.new()
+				err = image.load_png_from_buffer(zipfile.read_file(filename))
+				if err != Error.OK:
+					continue
+				add_prop(p, filename.get_file(), source, ImageTexture.create_from_image(image))
+		zipfile.close()
+	else:
+		var propdir : DirAccess = DirAccess.open(path)
+		if propdir:
+			for filename in propdir.get_files():
+				if filename.to_lower().get_extension() == 'png':
+					if source == 'user' or source == 'mapuser':
+						# user:// paths for global overrides and map overrides
+						image = Image.new()
+						image.load(path.path_join(filename))
+						if err != Error.OK:
+							continue
+						add_prop(p, filename, source, ImageTexture.create_from_image(image))
+					else:
+						# res:// paths don't need much
+						add_prop(p, filename, source, load(path.path_join(filename)))
+
+	return p
+
+func set_prop_defs(to_add : Array[Dictionary]):
+	propdefs = {}
+	for item in to_add:
+		propdefs.merge(item, true)
+	propnames = propdefs.keys()
+	if len(propdefs) > 0:
+		selected_pdef = 0
+
+func free_map_images():
+	var clearlist : Array[String] = []
+
+	for def in propdefs:
+		if propdefs[def].source == 'map' or propdefs[def].source == 'mapuser':
+			clearlist.append(def)
+
+	for item in clearlist:
+		propdefs.erase(item)
+
+func get_facing_pos():
+	match dir:
+		MapParameters.NORTH:
+			return Vector2i(pos.x, pos.y - 1)
+		MapParameters.EAST:
+			return Vector2i(pos.x + 1, pos.y)
+		MapParameters.SOUTH:
+			return Vector2i(pos.x, pos.y + 1)
+		_: # west
+			return Vector2i(pos.x - 1, pos.y)
+
 func status(val : String = ""):
 	if len(val) == 0:
-		status_str = "P {},{} D {} M {} F {} T {} P {}".format([pos.x, pos.y,
-																MapParameters.dir_string(dir),
-																MapParameters.mesh_string(mesh),
-																MapParameters.face_string(face),
-																MapParameters.topbottom_string(topbottom),
-																MapParameters.parameter_string(parameter)], "{}")
+		match mode:
+			RunMode.TERRAIN:
+				status_str = "Terra %d,%d %s %s %s %s %s" % [pos.x, pos.y,
+															MapParameters.dir_string(dir),
+															MapParameters.mesh_string(mesh),
+															MapParameters.face_string(face),
+															MapParameters.topbottom_string(topbottom),
+															MapParameters.parameter_string(parameter)]
+			RunMode.PROPS:
+				if len(propnames) > 0:
+					var prop_pos : Vector2i = get_facing_pos()
+					if prop_pos in props.props:
+						status_str = "Props %d,%d %s %s-%s %s" % [pos.x, pos.y,
+																  MapParameters.dir_string(dir),
+																  propdefs[propnames[selected_pdef]].source,
+																  propnames[selected_pdef],
+																  props.props[prop_pos][selected_prop].def.name]
+					else:
+						status_str = "Props %d,%d %s %s-%s" % [pos.x, pos.y,
+															   MapParameters.dir_string(dir),
+															   propdefs[propnames[selected_pdef]].source,
+															   propnames[selected_pdef]]
+				else:
+					status_str = "Props %d,%d %s NO PROPDEFS" % [pos.x, pos.y,
+																MapParameters.dir_string(dir)]
+			RunMode.EVENTS:
+				status_str = "Event %d,%d %s" % [pos.x, pos.y,
+												 MapParameters.dir_string(dir)]
 	else:
 		status_str = val
 	status_set = true
@@ -102,21 +212,14 @@ func set_fog_color():
 	$'WorldEnvironment'.environment.background_color = fog_color
 	terrain.set_fog_color(fog_color)
 
-func get_facing_pos():
-	match dir:
-		MapParameters.NORTH:
-			return Vector2i(pos.x, pos.y - 1)
-		MapParameters.EAST:
-			return Vector2i(pos.x + 1, pos.y)
-		MapParameters.SOUTH:
-			return Vector2i(pos.x, pos.y + 1)
-		_: # west
-			return Vector2i(pos.x - 1, pos.y)
-
 func change_parameter(amount : float):
 	var p : Vector2i = get_facing_pos()
 	if parameter <= MapParameters.GEOMETRY_PARAMETERS_MAX:
 		terrain.change(mesh, face, dir, topbottom, parameter, amount, p)
+		if parameter == MapParameters.HEIGHT and \
+		   mesh == MapParameters.FLOOR and \
+		   topbottom == MapParameters.TOP:
+			props.update_height(p)
 	elif parameter == MapParameters.FOG_COLOR_R:
 		fog_color.r += amount
 		set_fog_color()
@@ -256,6 +359,13 @@ func do_load(mapname : String):
 	if result[&'error'] != Error.OK:
 		status("Load failed: %s" % error_string(result[&'error']))
 	else:
+		for item in props.get_children():
+			item.queue_free()
+		set_prop_defs([respropdefs,
+					   userpropdefs,
+					   scan_props_dir('map', "user://%s.zip" % mapname),
+					   scan_props_dir('mapuser', "user://".path_join(PROPS_DIR).path_join(mapname))])
+
 		if &'pos' in result:
 			pos = result[&'pos']
 		if &'dir' in result:
@@ -385,6 +495,17 @@ func editor_common_process() -> Array[Variant]:
 		status_visibility(false)
 		return [false, false, 0]
 
+	if Input.is_action_just_pressed(&'cycle mode'):
+		match mode:
+			RunMode.TERRAIN:
+				mode = RunMode.PROPS
+			RunMode.PROPS:
+				mode = RunMode.EVENTS
+			RunMode.EVENTS:
+				mode = RunMode.TERRAIN
+		status()
+		return [false, false, 0]
+
 	if Input.is_action_pressed(&'alternate function'):
 		alternate = true
 
@@ -450,11 +571,17 @@ func editor_common_process() -> Array[Variant]:
 
 	if update_pos:
 		terrain.set_pos(pos)
+		props.set_pos(pos)
 		update_eye_height = true
+		if len(propnames) > 0:
+			selected_prop = 0
 		status()
 
 	if update_dir:
 		terrain.set_dir(dir)
+		props.set_dir(dir)
+		if len(propnames) > 0:
+			selected_prop = 0
 		status()
 
 	if update_eye_height:
@@ -585,14 +712,43 @@ func terrain_process(_delta : float):
 							  get_parameter(MapParameters.FLOOR, MapParameters.HORIZ, MapParameters.BOTTOM, MapParameters.HEIGHT)]
 			status("Cell heights stored.")
 
-	if Input.is_action_just_pressed(&'value_entry'):
+	if Input.is_action_just_pressed(&'value entry'):
 		set_text_entry_mode(do_store, "Value", str(stored))
 
 func props_process(_delta : float):
-	pass
+	var modifiers : Array[Variant] = editor_common_process()
+	if not modifiers[0]:
+		return
+
+	var alternate : bool = modifiers[1]
+	var change_speed : int = modifiers[2]
+
+	if Input.is_action_just_pressed(&'select prop def'):
+		if len(propnames) > 0:
+			if alternate:
+				if selected_pdef == 0:
+					selected_pdef = len(propnames) - 1
+				else:
+					selected_pdef -= 1
+			else:
+				if selected_pdef == len(propnames) - 1:
+					selected_pdef = 0
+				else:
+					selected_pdef += 1
+			status()
+
+	if Input.is_action_just_pressed(&'place prop'):
+		var prop_pos : Vector2i = get_facing_pos()
+		props.add_prop(propdefs[propnames[selected_pdef]], prop_pos)
+		status()
 
 func events_process(_delta : float):
-	pass
+	var modifiers : Array[Variant] = editor_common_process()
+	if not modifiers[0]:
+		return
+
+	var alternate : bool = modifiers[1]
+	var change_speed : int = modifiers[2]
 
 func play_process(delta : float):
 	var update_pos : bool = false
@@ -642,23 +798,31 @@ func play_process(delta : float):
 		if update_dir:
 			terrain.set_dir(dir)
 
+func scan_props():
+	respropdefs = scan_props_dir("res", "res://".path_join(PROPS_DIR))
+	userpropdefs = scan_props_dir("user", "user://".path_join(PROPS_DIR))
+
 func _ready():
+	scan_props()
+	set_prop_defs([respropdefs, userpropdefs])
+
 	terrain.set_texture(textures)
-	terrain.set_view(view_depth, $'Camera3D'.fov)
+	var view_positions : Array[Vector2i] = terrain.set_view(view_depth, $'Camera3D'.fov)
 	terrain.init_empty_world(Vector2i(world_width, world_height))
 	terrain.set_eye_height(eye_height)
 	set_fog_color()
 	terrain.set_fog_power(fog_power)
 	terrain.set_pos(pos)
 	terrain.set_dir(dir)
-	status()
 
-var MODE_FUNCS : Dictionary[RunMode, Callable] = {
-	RunMode.TERRAIN: terrain_process,
-	RunMode.PROPS: props_process,
-	RunMode.EVENTS: events_process,
-	RunMode.PLAY: play_process
-}
+	props.set_view_positions(view_positions)
+	props.heightmap = terrain.images[&'face_heights']
+	props.depth = view_depth
+	props.set_pos(pos)
+	props.set_dir(dir)
+	#props.set_height(eye_height)
+
+	status()
 
 func _process(delta : float):
 	if text_entry_cb == NO_CB:

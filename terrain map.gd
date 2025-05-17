@@ -142,25 +142,25 @@ func set_texture(texturename, reader = null, mapname = null):
 	var err : Error
 
 	if reader != null:
-		if filename in reader.get_files():
-			err = image.load_png_from_buffer(reader.read_file())
+		if reader.file_exists(filename):
+			err = image.load_png_from_buffer(reader.read_file(filename))
 			if err != Error.OK:
 				# just continue...
 				print_debug("File %s exists in %s.zip but failed to load!" % [filename, mapname])
 				image = Image.new()
 
 		if image.get_data_size() == 0:
-			err = image.load("user://mods/%s/%s" % [mapname, filename])
+			err = image.load("user://mods".path_join(mapname).path_join(filename))
 			if err != Error.OK:
 				image = Image.new()
 
 	if image.get_data_size() == 0:
-		terrain.set_texture(load("res://%s" % filename))
+		terrain.set_texture(load("res://".path_join(filename)))
 	else:
 		terrain.set_texture(ImageTexture.create_from_image(image))
 
 func set_view(depth, fov):
-	terrain.set_view(depth, fov)
+	return terrain.set_view(depth, fov)
 
 func set_eye_height(height):
 	terrain.set_eye_height(height)
@@ -524,7 +524,7 @@ func load_map(mapname : String) -> Dictionary:
 		return {&'error': err}
 
 	var size : Vector2i
-	var pos : Vector2i = Vector2i.ZERO
+	var pos : Vector2i
 
 	var info : Dictionary[StringName, Variant] = {&'error': Error.OK}
 	var info_file : String = reader.read_file("info.txt").get_string_from_utf8()
@@ -558,10 +558,9 @@ func load_map(mapname : String) -> Dictionary:
 		terrain.set_image(layer, images[layer])
 
 	if &'pos' in info:
-		var new_pos : Vector2i = info[&'pos']
-		if new_pos.x >= 0 and new_pos.x < size.x and \
-		   new_pos.y >= 0 and new_pos.y < size.y:
-			pos = new_pos
+		pos = info[&'pos']
+		if pos.x >= 0 and pos.x < size.x and \
+		   pos.y >= 0 and pos.y < size.y:
 			set_pos(pos)
 		else:
 			info.erase(&'pos')

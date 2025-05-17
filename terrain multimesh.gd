@@ -9,6 +9,7 @@ var images : Dictionary[StringName, Image]
 var textures : Dictionary[StringName, ImageTexture]
 
 var _mesh : Mesh
+
 var positions_north : ImageTexture
 var positions_east : ImageTexture
 var positions_south : ImageTexture
@@ -27,10 +28,12 @@ func set_texture(texture : Texture2D):
 	_mesh.material.set_shader_parameter(&'albedo_texture', texture)
 
 func set_view(depth : int, fov : float):
+	var positions : Array[Vector2i]
+
 	if max_depth == 0:
 		max_depth = depth
 		depth_counts.resize(max_depth)
-		var positions : Array[Vector2i] = Array([], TYPE_VECTOR2I, "", null)
+		positions = Array([], TYPE_VECTOR2I, "", null)
 		var count : int = 0
 		for i in max_depth:
 			var width = ((int(ceil(atan(fov / 180 * PI) * (i + 1))) - 1) * 2) + 1
@@ -78,6 +81,8 @@ func set_view(depth : int, fov : float):
 
 	_mesh.material.set_shader_parameter(&'max_depth', depth)
 	_mesh.material.set_shader_parameter(&'count', depth_counts[depth - 1])
+
+	return positions
 
 func set_image(image_name : StringName, image : Image):
 	if image_name not in images:

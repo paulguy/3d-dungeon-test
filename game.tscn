@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3 uid="uid://ckiyvlctwll6l"]
+[gd_scene load_steps=5 format=3 uid="uid://ckiyvlctwll6l"]
 
 [ext_resource type="Script" uid="uid://pu43yftegvrk" path="res://game.gd" id="1_e2o6t"]
 [ext_resource type="PackedScene" uid="uid://cwfcgw2p0mu4i" path="res://terrain map.tscn" id="2_feb5d"]
+[ext_resource type="Script" uid="uid://bcks4shkhvxew" path="res://PropsManager.gd" id="3_feb5d"]
 
 [sub_resource type="Environment" id="Environment_e2o6t"]
 background_mode = 1
@@ -19,6 +20,14 @@ keep_aspect = 0
 current = true
 
 [node name="Terrain Map" parent="." instance=ExtResource("2_feb5d")]
+
+[node name="Props" type="Node3D" parent="."]
+script = ExtResource("3_feb5d")
+
+[node name="Visible" type="Node3D" parent="Props"]
+
+[node name="Invisible" type="Node3D" parent="Props"]
+visible = false
 
 [node name="HUD" type="CanvasLayer" parent="."]
 

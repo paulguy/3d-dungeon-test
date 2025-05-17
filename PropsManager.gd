@@ -1,0 +1,170 @@
+extends Node3D
+class_name PropsManager
+
+var heightmap : Image
+var mapsize : Vector2i
+var positions : Array[Array]
+var offsets : Array[int]
+var props : Dictionary[Vector2i, Array]
+var view_pos : Vector2i = Vector2i.ZERO
+var view_dir : int = 0
+var view_height : float = 0.0
+var depth : int
+
+@onready var visible_node : Node3D = $'Visible'
+@onready var invisible_node : Node3D = $'Invisible'
+
+func set_view_positions(p : Array[Vector2i]):
+	positions = [[], [], [], []]
+	positions[2] = p
+	offsets = []
+	var last_y : int = p[0].y
+	var last_x : int = p[0].x
+	for item in p:
+		positions[0].append(Vector2i(-item.x, -item.y))
+		positions[1].append(Vector2i(item.y, -item.x))
+		positions[3].append(Vector2i(-item.y, item.x))
+		if item.y != last_y:
+			offsets.append(last_x)
+			last_y = item.y
+		last_x = item.x
+
+func update_view_pos(prop : Prop):
+	var prop_view_pos : Vector2i = prop.map_pos - view_pos
+
+	# floor mesh top is blue channel
+	if view_dir == MapParameters.SOUTH:
+		# looking down +Z
+		prop.set_view_pos(Vector3(prop_view_pos.x,
+								  heightmap.get_pixelv(prop.map_pos).b + view_height,
+								  prop_view_pos.y))
+	elif view_dir == MapParameters.NORTH:
+		# looking down -Z
+		prop.set_view_pos(Vector3(-prop_view_pos.x,
+								  heightmap.get_pixelv(prop.map_pos).b + view_height,
+								  -prop_view_pos.y))
+	elif view_dir == MapParameters.EAST:
+		# looking down +X
+		prop.set_view_pos(Vector3(-prop_view_pos.y,
+								  heightmap.get_pixelv(prop.map_pos).b + view_height,
+								  prop_view_pos.x))
+	else: # WEST
+		# looking down -X
+		prop.set_view_pos(Vector3(prop_view_pos.y,
+								  heightmap.get_pixelv(prop.map_pos).b + view_height,
+								  -prop_view_pos.x))
+
+func make_visible(prop : Prop):
+	update_view_pos(prop)
+	prop.sprite.reparent(visible_node)
+
+func execute_each_visible(callable : Callable):
+	var pos : Vector2i
+
+	for item in positions[view_dir]:
+		pos = view_pos + item
+		if pos in props:
+			for prop in props[pos]:
+				callable.call(prop)
+
+func execute_if_pos_visible(pos : Vector2i,
+							callable : Callable,
+							prop = null):
+	# move position relative to view position
+	var prop_view_pos : Vector2i = pos - view_pos
+
+	# if not looking for a particular prop, make sure the position even has
+	# props first and return if not
+	if prop == null and pos not in props:
+		return
+
+	if view_dir == MapParameters.SOUTH:
+		# looking down +Z
+		for i in len(offsets):
+			if prop_view_pos.y == i and \
+			   prop_view_pos.x >= -offsets[i] and prop_view_pos.x <= offsets[i]:
+				print("south visible")
+				if prop != null:
+					callable.call(prop)
+				else:
+					for p in props[pos]:
+						callable.call(p)
+				break
+	elif view_dir == MapParameters.NORTH:
+		# looking down -Z
+		for i in len(offsets):
+			if prop_view_pos.y == -i and \
+			   prop_view_pos.x >= -offsets[i] and prop_view_pos.x <= offsets[i]:
+				print("north visible")
+				if prop != null:
+					callable.call(prop)
+				else:
+					for p in props[pos]:
+						callable.call(p)
+				break
+	elif view_dir == MapParameters.EAST:
+		# looking down +X
+		for i in len(offsets):
+			if prop_view_pos.x == i and \
+			   prop_view_pos.y >= -offsets[i] and prop_view_pos.y <= offsets[i]:
+				print("east visible")
+				if prop != null:
+					callable.call(prop)
+				else:
+					for p in props[pos]:
+						callable.call(p)
+				break
+	else: # WEST
+		# looking down -X
+		for i in len(offsets):
+			if prop_view_pos.x == -i and \
+			   prop_view_pos.y >= -offsets[i] and prop_view_pos.y <= offsets[i]:
+				print("west visible")
+				if prop != null:
+					callable.call(prop)
+				else:
+					for p in props[pos]:
+						callable.call(p)
+				break
+
+func execute_if_prop_visible(prop : Prop,
+							 callable : Callable):
+	execute_if_pos_visible(prop.map_pos, callable, prop)
+
+func add_prop(propdef : PropDef, map_pos : Vector2i):
+	if not map_pos in props:
+		# if position has no props, create the array first
+		props[map_pos] = []
+
+	var prop : Prop = Prop.new(propdef, map_pos)
+	props[map_pos].append(prop)
+
+	# needs some initial parent
+	invisible_node.add_child(prop.sprite)
+
+	execute_if_prop_visible(prop, make_visible)
+
+func update_view():
+	# make everything invisible
+	# this is pretty inefficient as various nodes might not need to be rescanned
+	# especially because it'll happen with _every_ movement
+	# but direction changes will always change everything's visibility anyway
+	for child in visible_node.get_children():
+		child.reparent(invisible_node, false)
+
+	execute_each_visible(make_visible)
+
+func update_height(pos : Vector2i):
+	execute_if_pos_visible(pos, update_view_pos)
+
+func set_dir(dir : int):
+	view_dir = dir
+	update_view()
+
+func set_pos(pos : Vector2i):
+	view_pos = pos
+	update_view()
+
+func set_height(height : float):
+	view_height = height
+	execute_each_visible(update_view_pos)
