@@ -36,23 +36,27 @@ func update_view_pos(prop : Prop):
 	if view_dir == MapParameters.SOUTH:
 		# looking down +Z
 		prop.set_view_pos(Vector3(prop_view_pos.x,
-								  heightmap.get_pixelv(prop.map_pos).b + view_height,
+								  heightmap.get_pixelv(prop.map_pos).b - view_height,
 								  prop_view_pos.y))
+		prop.set_view_angle(0.0)
 	elif view_dir == MapParameters.NORTH:
 		# looking down -Z
 		prop.set_view_pos(Vector3(-prop_view_pos.x,
-								  heightmap.get_pixelv(prop.map_pos).b + view_height,
+								  heightmap.get_pixelv(prop.map_pos).b - view_height,
 								  -prop_view_pos.y))
+		prop.set_view_angle(PI)
 	elif view_dir == MapParameters.EAST:
 		# looking down +X
 		prop.set_view_pos(Vector3(-prop_view_pos.y,
-								  heightmap.get_pixelv(prop.map_pos).b + view_height,
+								  heightmap.get_pixelv(prop.map_pos).b - view_height,
 								  prop_view_pos.x))
+		prop.set_view_angle(PI * 1.5)
 	else: # WEST
 		# looking down -X
 		prop.set_view_pos(Vector3(prop_view_pos.y,
-								  heightmap.get_pixelv(prop.map_pos).b + view_height,
+								  heightmap.get_pixelv(prop.map_pos).b - view_height,
 								  -prop_view_pos.x))
+		prop.set_view_angle(PI * 0.5)
 
 func make_visible(prop : Prop):
 	update_view_pos(prop)
@@ -83,7 +87,6 @@ func execute_if_pos_visible(pos : Vector2i,
 		for i in len(offsets):
 			if prop_view_pos.y == i and \
 			   prop_view_pos.x >= -offsets[i] and prop_view_pos.x <= offsets[i]:
-				print("south visible")
 				if prop != null:
 					callable.call(prop)
 				else:
@@ -95,7 +98,6 @@ func execute_if_pos_visible(pos : Vector2i,
 		for i in len(offsets):
 			if prop_view_pos.y == -i and \
 			   prop_view_pos.x >= -offsets[i] and prop_view_pos.x <= offsets[i]:
-				print("north visible")
 				if prop != null:
 					callable.call(prop)
 				else:
@@ -107,7 +109,6 @@ func execute_if_pos_visible(pos : Vector2i,
 		for i in len(offsets):
 			if prop_view_pos.x == i and \
 			   prop_view_pos.y >= -offsets[i] and prop_view_pos.y <= offsets[i]:
-				print("east visible")
 				if prop != null:
 					callable.call(prop)
 				else:
@@ -119,7 +120,6 @@ func execute_if_pos_visible(pos : Vector2i,
 		for i in len(offsets):
 			if prop_view_pos.x == -i and \
 			   prop_view_pos.y >= -offsets[i] and prop_view_pos.y <= offsets[i]:
-				print("west visible")
 				if prop != null:
 					callable.call(prop)
 				else:
@@ -157,14 +157,40 @@ func update_view():
 func update_height(pos : Vector2i):
 	execute_if_pos_visible(pos, update_view_pos)
 
-func set_dir(dir : int):
+func set_view_dir(dir : int):
 	view_dir = dir
 	update_view()
 
-func set_pos(pos : Vector2i):
+func set_view_pos(pos : Vector2i):
 	view_pos = pos
 	update_view()
 
-func set_height(height : float):
+func set_view_height(height : float):
 	view_height = height
 	execute_each_visible(update_view_pos)
+
+func get_pos(prop_pos : Vector2i, idx : int) -> Vector3:
+	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+		return props[prop_pos][idx].pos
+	return Vector3.ZERO
+
+func set_pos(prop_pos : Vector2i, idx : int, pos : Vector3):
+	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+		props[prop_pos][idx].set_pos(pos)
+
+func get_angle(prop_pos : Vector2i, idx : int) -> float:
+	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+		return props[prop_pos][idx].angle
+	return 0.0
+
+func set_angle(prop_pos : Vector2i, idx : int, pos : float):
+	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+		props[prop_pos][idx].set_angle(pos)
+
+func toggle_billboard(prop_pos : Vector2i, idx : int):
+	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+		return props[prop_pos][idx].toggle_billboard()
+
+func toggle_one_sided(prop_pos : Vector2i, idx : int):
+	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+		return props[prop_pos][idx].toggle_one_sided()

@@ -49,6 +49,10 @@ const CHANGE_SPEEDS : Array[Array] = [
 	[0.01, 0.1, 1.0]
 ]
 
+const ROTATION_SPEEDS : Array[float] = [
+	PI / 64.0, PI / 16.0, PI / 2.0
+]
+
 func NO_CB(_s : String):
 	pass
 
@@ -152,16 +156,27 @@ func free_map_images():
 	for item in clearlist:
 		propdefs.erase(item)
 
-func get_facing_pos():
+func get_relative_to_dir(f_amount : int, s_amount : int):
+	var rel : Vector2i = Vector2i.ZERO
+
 	match dir:
 		MapParameters.NORTH:
-			return Vector2i(pos.x, pos.y - 1)
+			rel.y -= f_amount
+			rel.x += s_amount
 		MapParameters.EAST:
-			return Vector2i(pos.x + 1, pos.y)
+			rel.x += f_amount
+			rel.y += s_amount
 		MapParameters.SOUTH:
-			return Vector2i(pos.x, pos.y + 1)
+			rel.y += f_amount
+			rel.x -= s_amount
 		_: # west
-			return Vector2i(pos.x - 1, pos.y)
+			rel.x -= f_amount
+			rel.y -= s_amount
+
+	return rel
+
+func get_facing_pos():
+	return pos + get_relative_to_dir(1, 0)
 
 func status(val : String = ""):
 	if len(val) == 0:
@@ -449,19 +464,7 @@ func phys_move(d_pos : Vector2i):
 func move(f_amount : int, s_amount : int = 0, physics : bool = false):
 	var d_pos : Vector2i = pos
 
-	match dir:
-		MapParameters.NORTH:
-			d_pos.y -= f_amount
-			d_pos.x += s_amount
-		MapParameters.EAST:
-			d_pos.x += f_amount
-			d_pos.y += s_amount
-		MapParameters.SOUTH:
-			d_pos.y += f_amount
-			d_pos.x -= s_amount
-		_: # west
-			d_pos.x -= f_amount
-			d_pos.y -= s_amount
+	d_pos += get_relative_to_dir(f_amount, s_amount)
 
 	if physics:
 		phys_move(d_pos)
@@ -571,7 +574,7 @@ func editor_common_process() -> Array[Variant]:
 
 	if update_pos:
 		terrain.set_pos(pos)
-		props.set_pos(pos)
+		props.set_view_pos(pos)
 		update_eye_height = true
 		if len(propnames) > 0:
 			selected_prop = 0
@@ -579,13 +582,14 @@ func editor_common_process() -> Array[Variant]:
 
 	if update_dir:
 		terrain.set_dir(dir)
-		props.set_dir(dir)
+		props.set_view_dir(dir)
 		if len(propnames) > 0:
 			selected_prop = 0
 		status()
 
 	if update_eye_height:
 		terrain.set_eye_height(get_eye_height())
+		props.set_view_height(eye_height)
 
 	if Input.is_action_just_pressed(&'save'):
 		set_text_entry_mode(do_save, "Save", last_mapname)
@@ -740,7 +744,73 @@ func props_process(_delta : float):
 	if Input.is_action_just_pressed(&'place prop'):
 		var prop_pos : Vector2i = get_facing_pos()
 		props.add_prop(propdefs[propnames[selected_pdef]], prop_pos)
+		if selected_prop < 0:
+			selected_prop = 0
 		status()
+
+	if Input.is_action_just_pressed(&'prop billboard'):
+		var prop_pos : Vector2i = get_facing_pos()
+		props.toggle_billboard(prop_pos, selected_prop)
+
+	if Input.is_action_just_pressed(&'prop one sided'):
+		var prop_pos : Vector2i = get_facing_pos()
+		props.toggle_one_sided(prop_pos, selected_prop)
+
+	if Input.is_action_just_pressed(&'move prop up'):
+		var prop_pos : Vector2i = get_facing_pos()
+		var prop_cell_pos : Vector3 = props.get_pos(prop_pos, selected_prop)
+		prop_cell_pos.y += pow(10.0, change_speed - 2)
+		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+
+	if Input.is_action_just_pressed(&'move prop down'):
+		var prop_pos : Vector2i = get_facing_pos()
+		var prop_cell_pos : Vector3 = props.get_pos(prop_pos, selected_prop)
+		prop_cell_pos.y -= pow(10.0, change_speed - 2)
+		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+
+	if Input.is_action_just_pressed(&'move prop away'):
+		var prop_pos : Vector2i = get_facing_pos()
+		var prop_cell_pos : Vector3 = props.get_pos(prop_pos, selected_prop)
+		var move_offset : Vector2 = Vector2(get_relative_to_dir(1, 0)) * pow(10.0, change_speed - 2)
+		prop_cell_pos += Vector3(move_offset.x, 0.0, move_offset.y)
+		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+
+	if Input.is_action_just_pressed(&'move prop towards'):
+		var prop_pos : Vector2i = get_facing_pos()
+		var prop_cell_pos : Vector3 = props.get_pos(prop_pos, selected_prop)
+		var move_offset : Vector2 = Vector2(get_relative_to_dir(-1, 0)) * pow(10.0, change_speed - 2)
+		prop_cell_pos += Vector3(move_offset.x, 0.0, move_offset.y)
+		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+
+	if Input.is_action_just_pressed(&'move prop left'):
+		var prop_pos : Vector2i = get_facing_pos()
+		var prop_cell_pos : Vector3 = props.get_pos(prop_pos, selected_prop)
+		var move_offset : Vector2 = Vector2(get_relative_to_dir(0, -1)) * pow(10.0, change_speed - 2)
+		prop_cell_pos += Vector3(move_offset.x, 0.0, move_offset.y)
+		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+
+	if Input.is_action_just_pressed(&'move prop right'):
+		var prop_pos : Vector2i = get_facing_pos()
+		var prop_cell_pos : Vector3 = props.get_pos(prop_pos, selected_prop)
+		var move_offset : Vector2 = Vector2(get_relative_to_dir(0, 1)) * pow(10.0, change_speed - 2)
+		prop_cell_pos += Vector3(move_offset.x, 0.0, move_offset.y)
+		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+
+	if Input.is_action_just_pressed(&'rotate prop counter clockwise'):
+		var prop_pos : Vector2i = get_facing_pos()
+		var prop_angle : float = props.get_angle(prop_pos, selected_prop)
+		prop_angle += ROTATION_SPEEDS[change_speed]
+		if prop_angle >= TAU:
+			prop_angle -= TAU
+		props.set_angle(prop_pos, selected_prop, prop_angle)
+
+	if Input.is_action_just_pressed(&'rotate prop clockwise'):
+		var prop_pos : Vector2i = get_facing_pos()
+		var prop_angle : float = props.get_angle(prop_pos, selected_prop)
+		prop_angle -= ROTATION_SPEEDS[change_speed]
+		if prop_angle < 0.0:
+			prop_angle += TAU
+		props.set_angle(prop_pos, selected_prop, prop_angle)
 
 func events_process(_delta : float):
 	var modifiers : Array[Variant] = editor_common_process()
@@ -818,9 +888,9 @@ func _ready():
 	props.set_view_positions(view_positions)
 	props.heightmap = terrain.images[&'face_heights']
 	props.depth = view_depth
-	props.set_pos(pos)
-	props.set_dir(dir)
-	#props.set_height(eye_height)
+	props.set_view_pos(pos)
+	props.set_view_dir(dir)
+	props.set_view_height(eye_height)
 
 	status()
 

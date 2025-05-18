@@ -5,7 +5,17 @@ var def : PropDef
 var map_pos : Vector2i
 var pos : Vector3 = Vector3.ZERO
 var view_pos : Vector3 = Vector3.ZERO
+var angle : float = 0.0
+var view_angle : float = 0.0
 var sprite : MeshInstance3D
+var billboard : bool = false
+var one_sided : bool = false
+
+func set_mesh():
+	if billboard or one_sided:
+		sprite.mesh = def.one_side_mesh
+	else:
+		sprite.mesh = def.two_side_mesh
 
 func _init(p_def : PropDef,
 		   p_map_pos : Vector2i):
@@ -13,16 +23,10 @@ func _init(p_def : PropDef,
 	map_pos = p_map_pos
 
 	sprite = MeshInstance3D.new()
-	var mesh : PrimitiveMesh = PlaneMesh.new()
-	mesh.size = Vector2(1.0, 1.0)
-	#mesh.center_offset = Vector3(0.0, 0.5, 0.0)
-	mesh.orientation = PlaneMesh.FACE_Z
-	mesh.flip_faces = true
-	mesh.material = def.material
-	sprite.mesh = mesh
+	set_mesh()
 
 func update_pos():
-	sprite.position = view_pos + pos
+	sprite.position = view_pos + pos.rotated(Vector3.UP, view_angle)
 
 func set_pos(p_pos : Vector3):
 	pos = p_pos
@@ -31,3 +35,29 @@ func set_pos(p_pos : Vector3):
 func set_view_pos(p_view_pos : Vector3):
 	view_pos = p_view_pos
 	update_pos()
+
+func update_angle():
+	if billboard:
+		sprite.rotation.y = angle + PI
+	else:
+		sprite.rotation.y = view_angle + angle
+
+func set_angle(val : float):
+	angle = val
+	update_angle()
+
+func set_view_angle(val : float):
+	view_angle = val
+	update_angle()
+	update_pos()
+
+func toggle_billboard() -> bool:
+	billboard = not billboard
+	set_mesh()
+	update_angle()
+	return billboard
+
+func toggle_one_sided() -> bool:
+	one_sided = not one_sided
+	set_mesh()
+	return one_sided
