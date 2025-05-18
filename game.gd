@@ -192,11 +192,12 @@ func status(val : String = ""):
 				if len(propnames) > 0:
 					var prop_pos : Vector2i = get_facing_pos()
 					if prop_pos in props.props:
-						status_str = "Props %d,%d %s %s-%s %s" % [pos.x, pos.y,
-																  MapParameters.dir_string(dir),
-																  propdefs[propnames[selected_pdef]].source,
-																  propnames[selected_pdef],
-																  props.props[prop_pos][selected_prop].def.name]
+						status_str = "Props %d,%d %s %s-%s %d:%s" % [pos.x, pos.y,
+																	 MapParameters.dir_string(dir),
+																	 propdefs[propnames[selected_pdef]].source,
+																	 propnames[selected_pdef],
+																	 selected_prop,
+																	 props.props[prop_pos][selected_prop].def.name]
 					else:
 						status_str = "Props %d,%d %s %s-%s" % [pos.x, pos.y,
 															   MapParameters.dir_string(dir),
@@ -739,6 +740,21 @@ func props_process(_delta : float):
 					selected_pdef = 0
 				else:
 					selected_pdef += 1
+			status()
+
+	if Input.is_action_just_pressed(&'select prop'):
+		var prop_pos : Vector2i = get_facing_pos()
+		if prop_pos in props.props:
+			if alternate:
+				if selected_prop == 0:
+					selected_prop = len(props.props[prop_pos]) - 1
+				else:
+					selected_prop -= 1
+			else:
+				if selected_prop == len(props.props[prop_pos]) - 1:
+					selected_prop = 0
+				else:
+					selected_prop += 1
 			status()
 
 	if Input.is_action_just_pressed(&'place prop'):
