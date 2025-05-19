@@ -10,6 +10,7 @@ var view_angle : float = 0.0
 var sprite : MeshInstance3D
 var billboard : bool = false
 var one_sided : bool = false
+var ceiling_attach : bool = false
 
 func set_mesh():
 	if billboard or one_sided:
@@ -61,3 +62,12 @@ func toggle_one_sided() -> bool:
 	one_sided = not one_sided
 	set_mesh()
 	return one_sided
+
+func toggle_ceiling_attach(ceiling_height : float, floor_height : float) -> bool:
+	ceiling_attach = not ceiling_attach
+	if ceiling_attach:
+		pos.y = -((ceiling_height - floor_height) - pos.y)
+	else:
+		pos.y = (ceiling_height - floor_height) + pos.y
+	update_pos()
+	return ceiling_attach

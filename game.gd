@@ -233,8 +233,10 @@ func change_parameter(amount : float):
 	if parameter <= MapParameters.GEOMETRY_PARAMETERS_MAX:
 		terrain.change(mesh, face, dir, topbottom, parameter, amount, p)
 		if parameter == MapParameters.HEIGHT and \
-		   mesh == MapParameters.FLOOR and \
-		   topbottom == MapParameters.TOP:
+		   (mesh == MapParameters.FLOOR and \
+			topbottom == MapParameters.TOP) or \
+		   (mesh == MapParameters.CEILING and \
+			topbottom == MapParameters.FLOOR):
 			props.update_height(p)
 	elif parameter == MapParameters.FOG_COLOR_R:
 		fog_color.r += amount
@@ -771,6 +773,10 @@ func props_process(_delta : float):
 	if Input.is_action_just_pressed(&'prop one sided'):
 		var prop_pos : Vector2i = get_facing_pos()
 		props.toggle_one_sided(prop_pos, selected_prop)
+
+	if Input.is_action_just_pressed(&'prop attach'):
+		var prop_pos : Vector2i = get_facing_pos()
+		props.toggle_ceiling_attach(prop_pos, selected_prop)
 
 	if Input.is_action_just_pressed(&'move prop up'):
 		var prop_pos : Vector2i = get_facing_pos()
