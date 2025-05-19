@@ -11,6 +11,14 @@ func _init(p_name : StringName, p_source : String, p_image : Texture2D):
 	name = p_name
 	source = p_source
 	image = p_image
+	var imagesize : Vector2i = image.get_size()
+	var sizemul : Vector2 = Vector2.ONE
+
+	if imagesize.y > imagesize.x:
+		sizemul.y = imagesize.y / imagesize.x
+	elif imagesize.x > imagesize.y:
+		sizemul.x = imagesize.x / imagesize.y
+	sizemul.x /= 2.0
 
 	var material : StandardMaterial3D = StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -28,16 +36,27 @@ func _init(p_name : StringName, p_source : String, p_image : Texture2D):
 	var mesh_arrays = []
 	mesh_arrays.resize(Mesh.ARRAY_MAX)
 	mesh_arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([
-		Vector3(-0.5, 1.0, 0.0), Vector3(0.5, 1.0, 0.0), Vector3(-0.5, 0.0, 0.0),
-		Vector3(-0.5, 0.0, 0.0), Vector3(0.5, 1.0, 0.0), Vector3(0.5, 0.0, 0.0),
-		Vector3(0.5, 1.0, 0.0), Vector3(-0.5, 1.0, 0.0), Vector3(0.5, 0.0, 0.0),
-		Vector3(0.5, 0.0, 0.0), Vector3(-0.5, 1.0, 0.0), Vector3(-0.5, 0.0, 0.0),
+		Vector3(-sizemul.x, sizemul.y, 0.0),
+		Vector3(sizemul.x, sizemul.y, 0.0),
+		Vector3(-sizemul.x, 0.0, 0.0),
+
+		Vector3(-sizemul.x, 0.0, 0.0),
+		Vector3(sizemul.x, sizemul.y, 0.0),
+		Vector3(sizemul.x, 0.0, 0.0),
+
+		Vector3(sizemul.x, sizemul.y, 0.0),
+		Vector3(-sizemul.x, sizemul.y, 0.0),
+		Vector3(sizemul.x, 0.0, 0.0),
+
+		Vector3(sizemul.x, 0.0, 0.0),
+		Vector3(-sizemul.x, sizemul.y, 0.0),
+		Vector3(-sizemul.x, 0.0, 0.0)
 	])
 	mesh_arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([
 		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
 		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
 		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
-		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0)
 	])
 	mesh_arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([
 		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0),

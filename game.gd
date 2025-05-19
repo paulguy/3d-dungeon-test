@@ -766,6 +766,11 @@ func props_process(_delta : float):
 			selected_prop = 0
 		status()
 
+	# TODO: Gather these in to a property selection interface
+	#       Also:
+	#       horizontal/vertical scaling
+	#       horizontal mode
+	#       color modification
 	if Input.is_action_just_pressed(&'prop billboard'):
 		var prop_pos : Vector2i = get_facing_pos()
 		props.toggle_billboard(prop_pos, selected_prop)
