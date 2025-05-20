@@ -291,25 +291,25 @@ func lookup_offset(mesh : int, face : int, dir : int, topbottom : int, parameter
 			return mesh * 2
 		else: # vert/wall/side
 			if dir % 2 == 0: # north in 0, out 0  south in 2, out 2
-				return MapParameters.get_opp_dir(dir) + topbottom
+				return DirParameters.get_opp_dir(dir) + topbottom
 			else: # east in 1, out 0  west in 3 out 2
-				return MapParameters.get_opp_dir(dir) - 1 + topbottom
+				return DirParameters.get_opp_dir(dir) - 1 + topbottom
 	elif parameter == MapParameters.BIAS:
 		if face == 0:
 			return mesh * 2 + 1
 		else:
 			if dir % 2 == 0:
-				return MapParameters.get_opp_dir(dir) + topbottom
+				return DirParameters.get_opp_dir(dir) + topbottom
 			else:
-				return MapParameters.get_opp_dir(dir) - 1 + topbottom
+				return DirParameters.get_opp_dir(dir) - 1 + topbottom
 	elif parameter == MapParameters.OFFSET:
 		if face == 0:
 			return mesh * 2 + topbottom
 		else:
 			if mesh == 0:
-				return MapParameters.get_opp_dir(dir)
+				return DirParameters.get_opp_dir(dir)
 			else:
-				return MapParameters.get_opp_dir(dir)
+				return DirParameters.get_opp_dir(dir)
 
 	return -1
 

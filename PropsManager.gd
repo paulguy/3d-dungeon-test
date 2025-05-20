@@ -39,15 +39,15 @@ func update_view_pos(prop : Prop):
 		# floor mesh top is blue channel
 		height = heightmap.get_pixelv(prop.map_pos).b - view_height
 
-	if view_dir == MapParameters.SOUTH:
+	if view_dir == DirParameters.SOUTH:
 		# looking down +Z
 		prop.set_view_pos(Vector3(prop_view_pos.x, height, prop_view_pos.y))
 		prop.set_view_angle(0.0)
-	elif view_dir == MapParameters.NORTH:
+	elif view_dir == DirParameters.NORTH:
 		# looking down -Z
 		prop.set_view_pos(Vector3(-prop_view_pos.x, height, -prop_view_pos.y))
 		prop.set_view_angle(PI)
-	elif view_dir == MapParameters.EAST:
+	elif view_dir == DirParameters.EAST:
 		# looking down +X
 		prop.set_view_pos(Vector3(-prop_view_pos.y, height, prop_view_pos.x))
 		prop.set_view_angle(PI * 1.5)
@@ -80,7 +80,7 @@ func execute_if_pos_visible(pos : Vector2i,
 	if prop == null and pos not in props:
 		return
 
-	if view_dir == MapParameters.SOUTH:
+	if view_dir == DirParameters.SOUTH:
 		# looking down +Z
 		for i in len(offsets):
 			if prop_view_pos.y == i and \
@@ -91,7 +91,7 @@ func execute_if_pos_visible(pos : Vector2i,
 					for p in props[pos]:
 						callable.call(p)
 				break
-	elif view_dir == MapParameters.NORTH:
+	elif view_dir == DirParameters.NORTH:
 		# looking down -Z
 		for i in len(offsets):
 			if prop_view_pos.y == -i and \
@@ -102,7 +102,7 @@ func execute_if_pos_visible(pos : Vector2i,
 					for p in props[pos]:
 						callable.call(p)
 				break
-	elif view_dir == MapParameters.EAST:
+	elif view_dir == DirParameters.EAST:
 		# looking down +X
 		for i in len(offsets):
 			if prop_view_pos.x == i and \
@@ -167,36 +167,112 @@ func set_view_height(height : float):
 	view_height = height
 	execute_each_visible(update_view_pos)
 
+func has_prop(prop_pos : Vector2i, idx : int) -> bool:
+	return prop_pos in props and idx >= 0 and idx < len(props[prop_pos])
+
 func get_pos(prop_pos : Vector2i, idx : int) -> Vector3:
-	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+	if has_prop(prop_pos, idx):
 		return props[prop_pos][idx].pos
 	return Vector3.ZERO
 
 func set_pos(prop_pos : Vector2i, idx : int, pos : Vector3):
-	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+	if has_prop(prop_pos, idx):
 		props[prop_pos][idx].set_pos(pos)
 
+func set_pos_x(prop_pos : Vector2i, idx : int, pos_x : float):
+	if has_prop(prop_pos, idx):
+		var prop : Prop = props[prop_pos][idx]
+		var pos : Vector3 = prop.pos
+		pos.x = pos_x
+		prop.set_pos(pos)
+
+func set_pos_y(prop_pos : Vector2i, idx : int, pos_y : float):
+	if has_prop(prop_pos, idx):
+		var prop : Prop = props[prop_pos][idx]
+		var pos : Vector3 = prop.pos
+		pos.y = pos_y
+		prop.set_pos(pos)
+
+func set_pos_z(prop_pos : Vector2i, idx : int, pos_z : float):
+	if has_prop(prop_pos, idx):
+		var prop : Prop = props[prop_pos][idx]
+		var pos : Vector3 = prop.pos
+		pos.z = pos_z
+		prop.set_pos(pos)
+
 func get_angle(prop_pos : Vector2i, idx : int) -> float:
-	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+	if has_prop(prop_pos, idx):
 		return props[prop_pos][idx].angle
 	return 0.0
 
 func set_angle(prop_pos : Vector2i, idx : int, pos : float):
-	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+	if has_prop(prop_pos, idx):
 		props[prop_pos][idx].set_angle(pos)
 
 func toggle_billboard(prop_pos : Vector2i, idx : int):
-	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
-		return props[prop_pos][idx].toggle_billboard()
+	if has_prop(prop_pos, idx):
+		props[prop_pos][idx].toggle_billboard()
 
 func toggle_one_sided(prop_pos : Vector2i, idx : int):
-	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
-		return props[prop_pos][idx].toggle_one_sided()
+	if has_prop(prop_pos, idx):
+		props[prop_pos][idx].toggle_one_sided()
 
-func toggle_ceiling_attach(prop_pos : Vector2i, idx : int) -> bool:
-	if prop_pos in props and idx >= 0 and idx < len(props[prop_pos]):
+func toggle_ceiling_attach(prop_pos : Vector2i, idx : int):
+	if has_prop(prop_pos, idx):
 		var heights : Color = heightmap.get_pixelv(prop_pos)
-		var ceiling_attach : bool = props[prop_pos][idx].toggle_ceiling_attach(heights.g, heights.b)
+		props[prop_pos][idx].toggle_ceiling_attach(heights.g, heights.b)
 		update_height(prop_pos)
-		return ceiling_attach
-	return false
+
+func toggle_horizontal_mode(prop_pos : Vector2i, idx : int):
+	if has_prop(prop_pos, idx):
+		props[prop_pos][idx].toggle_horizontal_mode()
+
+func set_prop_scale(prop_pos : Vector2i, idx : int, prop_scale : Vector2):
+	if has_prop(prop_pos, idx):
+		props[prop_pos][idx].set_scale(prop_scale)
+
+func set_prop_scale_h(prop_pos : Vector2i, idx : int, prop_scale_h : float):
+	if has_prop(prop_pos, idx):
+		var prop : Prop = props[prop_pos][idx]
+		var prop_scale : Vector2 = prop.scale
+		prop_scale.x = prop_scale_h
+		prop.set_scale(prop_scale)
+
+func set_prop_scale_v(prop_pos : Vector2i, idx : int, prop_scale_v : float):
+	if has_prop(prop_pos, idx):
+		var prop : Prop = props[prop_pos][idx]
+		var prop_scale : Vector2 = prop.scale
+		prop_scale.y = prop_scale_v
+		prop.set_scale(prop_scale)
+
+func set_color(prop_pos : Vector2i, idx : int, color : Color):
+	if has_prop(prop_pos, idx):
+		props[prop_pos][idx].set_color(color)
+
+func set_color_r(prop_pos : Vector2i, idx : int, color_r : float):
+	if has_prop(prop_pos, idx):
+		var prop : Prop = props[prop_pos][idx]
+		var color : Color = prop.color
+		color.r = color_r
+		prop.set_color(color)
+
+func set_color_g(prop_pos : Vector2i, idx : int, color_g : float):
+	if has_prop(prop_pos, idx):
+		var prop : Prop = props[prop_pos][idx]
+		var color : Color = prop.color
+		color.g = color_g
+		prop.set_color(color)
+
+func set_color_b(prop_pos : Vector2i, idx : int, color_b : float):
+	if has_prop(prop_pos, idx):
+		var prop : Prop = props[prop_pos][idx]
+		var color : Color = prop.color
+		color.b = color_b
+		prop.set_color(color)
+
+func set_color_a(prop_pos : Vector2i, idx : int, color_a : float):
+	if has_prop(prop_pos, idx):
+		var prop : Prop = props[prop_pos][idx]
+		var color : Color = prop.color
+		color.a = color_a
+		prop.set_color(color)
