@@ -389,6 +389,9 @@ func set_env_bg_color():
 	# converted from shader
 	var fog_ratio : float = pow(MAX_DEPTH / (depth + 1.0), fog_power)
 	var bgcolor : Color = (Color.WHITE * (1.0 - fog_ratio)) + (fog_color * fog_ratio)
+	bgcolor.r = max(0.0, bgcolor.r)
+	bgcolor.g = max(0.0, bgcolor.g)
+	bgcolor.b = max(0.0, bgcolor.b)
 	$'WorldEnvironment'.environment.background_color = bgcolor
 
 func set_depth():

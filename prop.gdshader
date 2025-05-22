@@ -15,7 +15,7 @@ uniform float alpha;
 void vertex() {
 	COLOR.rgb = hue2rgb(hue, bias);
 	float fog_ratio = pow(VERTEX.z / (depth + 1.0), fog_power);
-	COLOR.rgb *= (COLOR.rgb * (1.0 - fog_ratio)) + (fog_color * fog_ratio);
+	COLOR.rgb *= max(vec3(0.0), (COLOR.rgb * (1.0 - fog_ratio)) + (fog_color * fog_ratio));
 }
 
 void fragment() {

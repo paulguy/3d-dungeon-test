@@ -131,7 +131,7 @@ void vertex() {
 
 	float fog_ratio = pow(-world_pos.y / (depth + 1.0), fog_power);
 
-	COLOR.rgb *= (COLOR.rgb * (1.0 - fog_ratio)) + (fog_color * fog_ratio);
+	COLOR.rgb *= max(vec3(0.0), (COLOR.rgb * (1.0 - fog_ratio)) + (fog_color * fog_ratio));
 
 	ivec2 tex_size = textureSize(albedo_texture, 0);
 	vec4 mesh_face_heights = texelFetch(face_heights, map_pos, 0);
