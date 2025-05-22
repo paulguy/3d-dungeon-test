@@ -17,6 +17,7 @@ var scale : Vector2 = Vector2.ONE
 var hue : float = 0.0
 var bias : float = 1.0
 var alpha : float = 1.0
+var mesh_arrays : Array = []
 
 const CHANGE_SPEEDS : Array[float] = [0.01, 0.1, 1.0]
 
@@ -130,7 +131,7 @@ static func value_string(parameter : int, val : Variant) -> String:
 
 func set_mesh_one_sided():
 	var mesh : PlaneMesh = PlaneMesh.new()
-	mesh.size = Vector2(1.0, 1.0)
+	mesh.size = def.sizemul
 	mesh.center_offset = Vector3(0.0, 0.5, 0.0)
 	mesh.orientation = PlaneMesh.FACE_Z
 	mesh.material = material
@@ -138,11 +139,10 @@ func set_mesh_one_sided():
 	sprite.mesh = mesh
 
 func set_mesh_two_sided():
-	var sizemul : Vector2 = def.sizemul
+	var sizemul : Vector2 = Vector2(def.sizemul)
+	sizemul.x /= 2.0
 
 	#Инициализируйте ArrayMesh.
-	var mesh_arrays = []
-	mesh_arrays.resize(Mesh.ARRAY_MAX)
 	mesh_arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([
 		Vector3(-sizemul.x, sizemul.y, 0.0),
 		Vector3(sizemul.x, sizemul.y, 0.0),
@@ -160,17 +160,34 @@ func set_mesh_two_sided():
 		Vector3(-sizemul.x, sizemul.y, 0.0),
 		Vector3(-sizemul.x, 0.0, 0.0)
 	])
-	mesh_arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([
-		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
-		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
-		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
-		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0)
-	])
-	mesh_arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([
-		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0),
-		Vector2(0.0, 1.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0),
-		Vector2(1.0, 0.0), Vector2(0.0, 0.0), Vector2(1.0, 1.0),
-		Vector2(1.0, 1.0), Vector2(0.0, 0.0), Vector2(0.0, 1.0)
+
+	# Создать сетку.
+	var mesh : ArrayMesh = ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh_arrays)
+	mesh.surface_set_material(0, material)
+
+	sprite.mesh = mesh
+
+func set_mesh_horizontal():
+	var sizemul : Vector2 = Vector2(def.sizemul) / 2.0
+
+	#Инициализируйте ArrayMesh.
+	mesh_arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([
+		Vector3(sizemul.x, 0.0, sizemul.y),
+		Vector3(-sizemul.x, 0.0, sizemul.y),
+		Vector3(sizemul.x, 0.0, -sizemul.y),
+
+		Vector3(sizemul.x, 0.0, -sizemul.y),
+		Vector3(-sizemul.x, 0.0, sizemul.y),
+		Vector3(-sizemul.x, 0.0, -sizemul.y),
+
+		Vector3(-sizemul.x, 0.0, sizemul.y),
+		Vector3(sizemul.x, 0.0, sizemul.y),
+		Vector3(-sizemul.x, 0.0, -sizemul.y),
+
+		Vector3(-sizemul.x, 0.0, -sizemul.y),
+		Vector3(sizemul.x, 0.0, sizemul.y),
+		Vector3(sizemul.x, 0.0, -sizemul.y)
 	])
 
 	# Создать сетку.
@@ -183,6 +200,8 @@ func set_mesh_two_sided():
 func set_mesh():
 	if billboard or one_sided:
 		set_mesh_one_sided()
+	elif horizontal_mode:
+		set_mesh_horizontal()
 	else:
 		set_mesh_two_sided()
 
@@ -199,10 +218,19 @@ func _init(p_def : PropDef,
 	material.set_shader_parameter(&'bias', bias)
 	material.set_shader_parameter(&'alpha', alpha)
 
-	#material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	#material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	#material.albedo_texture = def.image
-	#material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	mesh_arrays.resize(Mesh.ARRAY_MAX)
+	mesh_arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([
+		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
+		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0)
+	])
+	mesh_arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([
+		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0),
+		Vector2(0.0, 1.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0),
+		Vector2(1.0, 0.0), Vector2(0.0, 0.0), Vector2(1.0, 1.0),
+		Vector2(1.0, 1.0), Vector2(0.0, 0.0), Vector2(0.0, 1.0)
+	])
 
 	sprite = MeshInstance3D.new()
 	set_mesh()
@@ -251,8 +279,8 @@ func toggle_ceiling_attach(ceiling_height : float, floor_height : float):
 	update_pos()
 
 func toggle_horizontal_mode():
-	# TODO: implement this
 	horizontal_mode = not horizontal_mode
+	set_mesh()
 
 func set_scale(p_scale : Vector2):
 	scale = p_scale

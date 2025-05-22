@@ -16,4 +16,3 @@ func _init(p_name : StringName, p_source : String, p_image : Texture2D):
 		sizemul.y = imagesize.y / imagesize.x
 	elif imagesize.x > imagesize.y:
 		sizemul.x = imagesize.x / imagesize.y
-	sizemul.x /= 2.0
