@@ -29,13 +29,14 @@ var MODE_FUNCS : Dictionary[RunMode, Callable] = {
 	RunMode.PLAY: play_process
 }
 
-var view_depth : int = 49
+const MAX_DEPTH : int = 49
 var eye_height : float = DEFAULT_EYE_HEIGHT
 var ceiling_attach : bool = false
 var world_width : int = 128
 var world_height : int = 128
 var fog_power : float = 0.5
 var fog_color : Color = Color(0.0, 0.0, 0.0)
+var depth : int
 var textures : String = "textures"
 
 const CHANGE_SPEEDS : Array[Array] = [
@@ -46,7 +47,8 @@ const CHANGE_SPEEDS : Array[Array] = [
 	[0.01, 0.1, 1.0],
 	[0.01, 0.1, 1.0],
 	[0.01, 0.1, 1.0],
-	[0.01, 0.1, 1.0]
+	[0.01, 0.1, 1.0],
+	[1.0, 1.0, 10.0]
 ]
 
 const ROTATION_SPEEDS : Array[float] = [
@@ -97,6 +99,7 @@ var p_parameter : int = 0
 var status_set : bool = false
 var status_str : String
 
+# TODO: delete props
 func add_prop(p : Dictionary[String, PropDef], pname : String, source : String, image : Texture2D):
 	pname = StringName(pname.get_basename())
 	p[pname] = PropDef.new(pname, source, image)
@@ -179,6 +182,97 @@ func get_relative_to_dir(f_amount : int, s_amount : int):
 func get_facing_pos():
 	return pos + get_relative_to_dir(1, 0)
 
+func change_parameter(amount : float):
+	var p : Vector2i = get_facing_pos()
+	if t_parameter <= MapParameters.GEOMETRY_PARAMETERS_MAX:
+		terrain.change(mesh, face, dir, topbottom, t_parameter, amount, p)
+		if t_parameter == MapParameters.HEIGHT and \
+		   (mesh == MapParameters.FLOOR and \
+			topbottom == MapParameters.TOP) or \
+		   (mesh == MapParameters.CEILING and \
+			topbottom == MapParameters.FLOOR):
+			props.update_height(p)
+	elif t_parameter == MapParameters.FOG_COLOR_R:
+		fog_color.r += amount
+		set_fog_color()
+	elif t_parameter == MapParameters.FOG_COLOR_G:
+		fog_color.g += amount
+		set_fog_color()
+	elif t_parameter == MapParameters.FOG_COLOR_B:
+		fog_color.b += amount
+		set_fog_color()
+	elif t_parameter == MapParameters.FOG_POWER:
+		fog_power += amount
+		set_fog_power()
+	elif t_parameter == MapParameters.DEPTH:
+		depth += amount
+		set_depth()
+
+func set_terrain_parameter(val : float, m : int = -1, f : int = -1, t : int = -1, p : int = -1):
+	var fp : Vector2i = get_facing_pos()
+
+	var r_mesh : int = mesh
+	var r_face : int = face
+	var r_tb : int = topbottom
+	var r_param : int = t_parameter
+	if m >= 0:
+		r_mesh = m
+	if f >= 0:
+		r_face = f
+	if t >= 0:
+		r_tb = t
+	if p >= 0:
+		r_param = p
+
+	if r_param <= MapParameters.GEOMETRY_PARAMETERS_MAX:
+		terrain.set_val(r_mesh, r_face, dir, r_tb, r_param, val, fp)
+	elif r_param == MapParameters.FOG_COLOR_R:
+		fog_color.r = val
+		set_fog_color()
+	elif r_param == MapParameters.FOG_COLOR_G:
+		fog_color.g = val
+		set_fog_color()
+	elif r_param == MapParameters.FOG_COLOR_B:
+		fog_color.b = val
+		set_fog_color()
+	elif r_param == MapParameters.FOG_POWER:
+		fog_power = val
+		set_fog_power()
+	elif r_param == MapParameters.DEPTH:
+		depth = val
+		set_depth()
+
+func get_terrain_parameter(m : int = -1, f : int = -1, t : int = -1, p : int = -1, d_pos = null) -> float:
+	if d_pos == null:
+		d_pos = get_facing_pos()
+
+	var r_mesh : int = mesh
+	var r_face : int = face
+	var r_tb : int = topbottom
+	var r_param : int = t_parameter
+	if m >= 0:
+		r_mesh = m
+	if f >= 0:
+		r_face = f
+	if t >= 0:
+		r_tb = t
+	if p >= 0:
+		r_param = p
+
+	if r_param <= MapParameters.GEOMETRY_PARAMETERS_MAX:
+		return terrain.get_val(r_mesh, r_face, dir, r_tb, r_param, d_pos)
+	elif r_param == MapParameters.FOG_COLOR_R:
+		return fog_color.r
+	elif r_param == MapParameters.FOG_COLOR_G:
+		return fog_color.g
+	elif r_param == MapParameters.FOG_COLOR_B:
+		return fog_color.b
+	elif r_param == MapParameters.FOG_POWER:
+		return fog_power
+	elif r_param == MapParameters.DEPTH:
+		return depth
+	return 0.0
+
 func get_prop_val(prop_pos : Vector2i) -> Variant:
 	if props.has_prop(prop_pos, selected_prop):
 		match p_parameter:
@@ -194,14 +288,12 @@ func get_prop_val(prop_pos : Vector2i) -> Variant:
 				return props.props[prop_pos][selected_prop].scale.x
 			Prop.SCALE_V:
 				return props.props[prop_pos][selected_prop].scale.y
-			Prop.COLOR_MOD_R:
-				return props.props[prop_pos][selected_prop].color.r
-			Prop.COLOR_MOD_G:
-				return props.props[prop_pos][selected_prop].color.g
-			Prop.COLOR_MOD_B:
-				return props.props[prop_pos][selected_prop].color.b
-			Prop.COLOR_MOD_A:
-				return props.props[prop_pos][selected_prop].color.a
+			Prop.COLOR_HUE:
+				return props.props[prop_pos][selected_prop].hue
+			Prop.COLOR_BIAS:
+				return props.props[prop_pos][selected_prop].bias
+			Prop.COLOR_ALPHA:
+				return props.props[prop_pos][selected_prop].alpha
 			Prop.POS_X:
 				return props.props[prop_pos][selected_prop].pos.x
 			Prop.POS_Y:
@@ -227,14 +319,12 @@ func set_prop_val(prop_pos : Vector2i, prop_val : Variant = null):
 			props.set_prop_scale_h(prop_pos, selected_prop, prop_val)
 		Prop.SCALE_V:
 			props.set_prop_scale_v(prop_pos, selected_prop, prop_val)
-		Prop.COLOR_MOD_R:
-			props.set_prop_color_r(prop_pos, selected_prop, prop_val)
-		Prop.COLOR_MOD_G:
-			props.set_prop_color_g(prop_pos, selected_prop, prop_val)
-		Prop.COLOR_MOD_B:
-			props.set_prop_color_b(prop_pos, selected_prop, prop_val)
-		Prop.COLOR_MOD_A:
-			props.set_prop_color_a(prop_pos, selected_prop, prop_val)
+		Prop.COLOR_HUE:
+			props.set_hue(prop_pos, selected_prop, prop_val)
+		Prop.COLOR_BIAS:
+			props.set_bias(prop_pos, selected_prop, prop_val)
+		Prop.COLOR_ALPHA:
+			props.set_alpha(prop_pos, selected_prop, prop_val)
 		Prop.POS_X:
 			props.set_pos_x(prop_pos, selected_prop, prop_val)
 		Prop.POS_Y:
@@ -248,12 +338,13 @@ func status(val : String = ""):
 	if len(val) == 0:
 		match mode:
 			RunMode.TERRAIN:
-				status_str = "Terra %d,%d %s %s %s %s %s" % [pos.x, pos.y,
-															DirParameters.dir_string(dir),
-															MapParameters.mesh_string(mesh),
-															MapParameters.face_string(face),
-															MapParameters.topbottom_string(topbottom),
-															MapParameters.parameter_string(t_parameter)]
+				status_str = "Terra %d,%d %s %s %s %s %s =%.2f" % [pos.x, pos.y,
+																  DirParameters.dir_string(dir),
+																  MapParameters.mesh_string(mesh),
+																  MapParameters.face_string(face),
+																  MapParameters.topbottom_string(topbottom),
+																  MapParameters.parameter_string(t_parameter),
+																  get_terrain_parameter()]
 			RunMode.PROPS:
 				if len(propnames) > 0:
 					var prop_pos : Vector2i = get_facing_pos()
@@ -294,92 +385,23 @@ func status_visibility(v : bool):
 	else:
 		hud_status.visible = false
 
+func set_env_bg_color():
+	# converted from shader
+	var fog_ratio : float = pow(MAX_DEPTH / (depth + 1.0), fog_power)
+	var bgcolor : Color = (Color.WHITE * (1.0 - fog_ratio)) + (fog_color * fog_ratio)
+	$'WorldEnvironment'.environment.background_color = bgcolor
+
+func set_depth():
+	depth = terrain.set_depth(depth)
+	set_env_bg_color()
+
 func set_fog_color():
-	$'WorldEnvironment'.environment.background_color = fog_color
 	terrain.set_fog_color(fog_color)
+	set_env_bg_color()
 
-func change_parameter(amount : float):
-	var p : Vector2i = get_facing_pos()
-	if t_parameter <= MapParameters.GEOMETRY_PARAMETERS_MAX:
-		terrain.change(mesh, face, dir, topbottom, t_parameter, amount, p)
-		if t_parameter == MapParameters.HEIGHT and \
-		   (mesh == MapParameters.FLOOR and \
-			topbottom == MapParameters.TOP) or \
-		   (mesh == MapParameters.CEILING and \
-			topbottom == MapParameters.FLOOR):
-			props.update_height(p)
-	elif t_parameter == MapParameters.FOG_COLOR_R:
-		fog_color.r += amount
-		set_fog_color()
-	elif t_parameter == MapParameters.FOG_COLOR_G:
-		fog_color.g += amount
-		set_fog_color()
-	elif t_parameter == MapParameters.FOG_COLOR_B:
-		fog_color.b += amount
-		set_fog_color()
-	elif t_parameter == MapParameters.FOG_POWER:
-		fog_power += amount
-		terrain.set_fog_power(fog_power)
-
-func set_terrain_parameter(val : float, m : int = -1, f : int = -1, t : int = -1, p : int = -1):
-	var fp : Vector2i = get_facing_pos()
-
-	var r_mesh : int = mesh
-	var r_face : int = face
-	var r_tb : int = topbottom
-	var r_param : int = t_parameter
-	if m >= 0:
-		r_mesh = m
-	if f >= 0:
-		r_face = f
-	if t >= 0:
-		r_tb = t
-	if p >= 0:
-		r_param = p
-
-	if r_param <= MapParameters.GEOMETRY_PARAMETERS_MAX:
-		terrain.set_val(r_mesh, r_face, dir, r_tb, r_param, val, fp)
-	elif r_param == MapParameters.FOG_COLOR_R:
-		fog_color.r = val
-		set_fog_color()
-	elif r_param == MapParameters.FOG_COLOR_G:
-		fog_color.g = val
-		set_fog_color()
-	elif r_param == MapParameters.FOG_COLOR_B:
-		fog_color.b = val
-		set_fog_color()
-	elif r_param == MapParameters.FOG_POWER:
-		fog_power = val
-		terrain.set_fog_power(fog_power)
-
-func get_terrain_parameter(m : int = -1, f : int = -1, t : int = -1, p : int = -1, d_pos = null) -> float:
-	if d_pos == null:
-		d_pos = get_facing_pos()
-
-	var r_mesh : int = mesh
-	var r_face : int = face
-	var r_tb : int = topbottom
-	var r_param : int = t_parameter
-	if m >= 0:
-		r_mesh = m
-	if f >= 0:
-		r_face = f
-	if t >= 0:
-		r_tb = t
-	if p >= 0:
-		r_param = p
-
-	if r_param <= MapParameters.GEOMETRY_PARAMETERS_MAX:
-		return terrain.get_val(r_mesh, r_face, dir, r_tb, r_param, d_pos)
-	elif r_param == MapParameters.FOG_COLOR_R:
-		return fog_color.r
-	elif r_param == MapParameters.FOG_COLOR_G:
-		return fog_color.g
-	elif r_param == MapParameters.FOG_COLOR_B:
-		return fog_color.b
-	elif r_param == MapParameters.FOG_POWER:
-		return fog_power
-	return 0.0
+func set_fog_power():
+	terrain.set_fog_power(fog_power)
+	set_env_bg_color()
 
 func get_eye_height() -> float:
 	if ceiling_attach:
@@ -1131,17 +1153,17 @@ func _ready():
 	set_prop_defs([respropdefs, userpropdefs])
 
 	terrain.set_texture(textures)
-	var view_positions : Array[Vector2i] = terrain.set_view(view_depth, $'Camera3D'.fov)
+	var view_positions : Array[Vector2i] = terrain.set_view(MAX_DEPTH, $'Camera3D'.fov)
+	depth = MAX_DEPTH
 	terrain.init_empty_world(Vector2i(world_width, world_height))
 	terrain.set_eye_height(eye_height)
 	set_fog_color()
-	terrain.set_fog_power(fog_power)
+	set_fog_power()
 	terrain.set_pos(pos)
 	terrain.set_dir(dir)
 
 	props.set_view_positions(view_positions)
 	props.heightmap = terrain.images[&'face_heights']
-	props.depth = view_depth
 	props.set_view_pos(pos)
 	props.set_view_dir(dir)
 	props.set_view_height(eye_height)

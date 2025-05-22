@@ -72,6 +72,8 @@ P - cycle between parameters *
     fog color g
     fog color b - color of distance fog
     fog power - power the fog intensity is raised to
+    depth - max visible depth, fog will scale to look "foggier" as this is
+            decreased
 J, K - decrease/increase parameter.  Parameters will be increased or decreased
        by default at some "sensible" rate, usually 0.1, except offset which is
        by 1/8 by default.  Holding shift will change all values by 1.0 and
@@ -116,12 +118,9 @@ B - cycle prop parameter *
     horizontal mode - sprite lays flat on the ground
     horizontal scale
     vertical scale - sprite scale
-    color mod r
-    color mod g
-    color mod b
-    color mod a - color modulation (multiplication, 1.0 - not modified,
-                                                    <1.0 - darker,
-                                                    >1.0 - brighter)
+    color hue
+    color bias - adjust prop hue and bias, works like above
+    color alpha - adjust prop alpha (opacity)
     position x
     position y
     position z - sprite position in cell, this is the same as the "move prop"

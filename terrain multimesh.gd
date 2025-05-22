@@ -3,7 +3,7 @@ extends MultiMeshInstance3D
 # just some random "safe" value
 const LOOKUP_TEX_WIDTH : int = 1024
 
-var max_depth : int = 0
+var max_depth : int
 
 var images : Dictionary[StringName, Image]
 var textures : Dictionary[StringName, ImageTexture]
@@ -79,7 +79,7 @@ func set_view(depth : int, fov : float):
 	else:
 		depth = min(depth, max_depth)
 
-	_mesh.material.set_shader_parameter(&'max_depth', depth)
+	RenderingServer.global_shader_parameter_set(&'depth', max_depth)
 	_mesh.material.set_shader_parameter(&'count', depth_counts[depth - 1])
 
 	return positions
@@ -122,10 +122,15 @@ func set_eye_height(eye_height : float):
 	_mesh.material.set_shader_parameter(&'eye_height', eye_height)
 
 func set_fog_color(val : Color):
-	_mesh.material.set_shader_parameter(&'fog_color', val)
+	RenderingServer.global_shader_parameter_set(&'fog_color', val)
 
 func set_fog_power(val : float):
-	_mesh.material.set_shader_parameter(&'fog_power', val)
+	RenderingServer.global_shader_parameter_set(&'fog_power', val)
+
+func set_depth(depth : int):
+	depth = clamp(depth, 0, max_depth)
+	RenderingServer.global_shader_parameter_set(&'depth', depth)
+	return depth
 
 func set_pos(pos : Vector2i):
 	_mesh.material.set_shader_parameter(&'view_pos', pos)

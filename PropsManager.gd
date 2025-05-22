@@ -9,7 +9,6 @@ var props : Dictionary[Vector2i, Array]
 var view_pos : Vector2i = Vector2i.ZERO
 var view_dir : int = 0
 var view_height : float = 0.0
-var depth : int
 
 @onready var visible_node : Node3D = $'Visible'
 @onready var invisible_node : Node3D = $'Invisible'
@@ -245,34 +244,14 @@ func set_prop_scale_v(prop_pos : Vector2i, idx : int, prop_scale_v : float):
 		prop_scale.y = prop_scale_v
 		prop.set_scale(prop_scale)
 
-func set_color(prop_pos : Vector2i, idx : int, color : Color):
+func set_hue(prop_pos : Vector2i, idx : int, hue : float):
 	if has_prop(prop_pos, idx):
-		props[prop_pos][idx].set_color(color)
+		props[prop_pos][idx].set_hue(hue)
 
-func set_color_r(prop_pos : Vector2i, idx : int, color_r : float):
+func set_bias(prop_pos : Vector2i, idx : int, bias : float):
 	if has_prop(prop_pos, idx):
-		var prop : Prop = props[prop_pos][idx]
-		var color : Color = prop.color
-		color.r = color_r
-		prop.set_color(color)
+		props[prop_pos][idx].set_bias(bias)
 
-func set_color_g(prop_pos : Vector2i, idx : int, color_g : float):
+func set_alpha(prop_pos : Vector2i, idx : int, alpha : float):
 	if has_prop(prop_pos, idx):
-		var prop : Prop = props[prop_pos][idx]
-		var color : Color = prop.color
-		color.g = color_g
-		prop.set_color(color)
-
-func set_color_b(prop_pos : Vector2i, idx : int, color_b : float):
-	if has_prop(prop_pos, idx):
-		var prop : Prop = props[prop_pos][idx]
-		var color : Color = prop.color
-		color.b = color_b
-		prop.set_color(color)
-
-func set_color_a(prop_pos : Vector2i, idx : int, color_a : float):
-	if has_prop(prop_pos, idx):
-		var prop : Prop = props[prop_pos][idx]
-		var color : Color = prop.color
-		color.a = color_a
-		prop.set_color(color)
+		props[prop_pos][idx].set_alpha(alpha)

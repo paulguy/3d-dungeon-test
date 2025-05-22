@@ -252,3 +252,18 @@ heights={
 
 textures/canvas_textures/default_texture_filter=0
 anti_aliasing/quality/msaa_3d=1
+
+[shader_globals]
+
+depth={
+"type": "float",
+"value": 0.0
+}
+fog_power={
+"type": "float",
+"value": 0.0
+}
+fog_color={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}

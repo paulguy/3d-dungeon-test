@@ -1,7 +1,12 @@
 shader_type spatial;
 render_mode unshaded;
 render_mode skip_vertex_transform;
-uniform float max_depth; // max depth of meshes
+
+#include "hue2rgb.gdshaderinc"
+
+global uniform float depth; // max depth of meshes
+global uniform float fog_power;
+global uniform vec3 fog_color;
 uniform int count; // count of meshes
 uniform sampler2D world_positions;
 uniform ivec2 view_pos; // position in map
@@ -9,8 +14,6 @@ uniform sampler2D map_positions; // Coordinate offsets for looking up data in te
 uniform mat3 mesh_transform;
 uniform float eye_height;
 uniform int lookup_tex_width;
-uniform float fog_power;
-uniform vec3 fog_color;
 
 // r - ceiling top
 // g - ceiling bottom
@@ -43,25 +46,6 @@ uniform sampler2D ceiling_east_west_biases;
 uniform sampler2D ceiling_side_texture_offsets;
 uniform sampler2D albedo_texture : filter_nearest;
 
-vec3 hue2rgb(float val, float bias) {
-	// in theory, each color starts at 1.0, then a notch is cut out
-	// W     R     Y     G     C     B     M
-	// 0.00  0.16  0.33  0.49  0.67  0.84  1.00
-	// _|_  _|_   _|     |     |     |    _|_
-	//  |    |     |  \ _|_   _|_   _|_ /  |
-
-	// |_    |    _|_   _|_   _|_    |     |
-	// |  \ _|_ /  |     |     |  \ _|_   _|_
-
-	// |_    |     |     |    _|_   _|_   _|_
-	// |  \ _|_   _|_   _|_ /  |     |     |
-
-	// bias below 1.0 should darken, bias above 1.0 should "desaturate"
-	return vec3(1.0 - (((clamp(val, 0.33, 0.49) - 0.33) - (max(val, 0.84) - 0.84)) / 0.16),
-				1.0 - ((min(val, 0.16) - (clamp(val, 0.16, 0.32) - 0.16)) / 0.16) - ((clamp(val, 0.67, 0.83) - 0.67) / 0.16),
-				1.0 - ((min(val, 0.16) - (clamp(val, 0.49, 0.67) - 0.49)) / 0.16)) * max(bias, 1.0) + min(bias - 1.0, 0.0);
-}
-
 void vertex() {
 	int id = INSTANCE_ID % count;
 	int ceiling_mesh = INSTANCE_ID / count;
@@ -70,18 +54,10 @@ void vertex() {
 	float ffloor_mesh = float(floor_mesh);
 	vec2 world_pos = texelFetch(world_positions, ivec2(id % lookup_tex_width, id / lookup_tex_width), 0).rg;
 	ivec2 map_pos = ivec2(texelFetch(map_positions, ivec2(id % lookup_tex_width, id / lookup_tex_width), 0).rg) + view_pos;
-	float view_height = texelFetch(face_heights, view_pos, 0).b;
 
 	vec3 tnormal = NORMAL * mesh_transform;
 	vec3 tvertex = VERTEX * mesh_transform;
 
-	float horiz_face = abs(NORMAL.y); // will be 1.0 on top and bottom
-	float north_face = max(0.0, tnormal.z);
-	float south_face = -min(0.0, tnormal.z);
-	float west_face = max(0.0, tnormal.x);
-	float east_face = -min(0.0, tnormal.x);
-	float top_face = max(0.0, NORMAL.y);
-	float bottom_face = -min(0.0, NORMAL.y);
 	float top_vert = max(VERTEX.y, 0.0) * 2.0;
 	float bottom_vert = min(VERTEX.y, 0.0) * -2.0;
 
@@ -153,7 +129,7 @@ void vertex() {
 		}
 	}
 
-	float fog_ratio = pow(-world_pos.y / (max_depth + 1.0), fog_power);
+	float fog_ratio = pow(-world_pos.y / (depth + 1.0), fog_power);
 
 	COLOR.rgb *= (COLOR.rgb * (1.0 - fog_ratio)) + (fog_color * fog_ratio);
 
@@ -163,8 +139,6 @@ void vertex() {
 	vec4 floor_tex_offsets = texelFetch(floor_side_texture_offsets, map_pos, 0);
 	vec4 ceiling_tex_offsets = texelFetch(ceiling_side_texture_offsets, map_pos, 0);
 	vec2 uv_scale = vec2(1.0, float(tex_size.y / tex_size.x));
-	vec2 floor_bottom_offset = vec2(0.0, bottom_vert * (mesh_face_heights.b - mesh_face_heights.a));
-	vec2 ceiling_top_offset = vec2(0.0, top_vert * (mesh_face_heights.r - mesh_face_heights.g));
 
 	if(ceiling_mesh > 0) {
 		if(NORMAL.y > 0.1) { // top face

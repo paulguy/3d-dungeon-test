@@ -177,6 +177,9 @@ func set_pos(pos):
 func set_dir(dir):
 	terrain.set_dir(dir)
 
+func set_depth(depth):
+	return terrain.set_depth(depth)
+
 # properties
 # heights
 #  ceiling top

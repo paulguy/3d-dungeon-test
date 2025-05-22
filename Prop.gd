@@ -3,6 +3,7 @@ class_name Prop
 
 var def : PropDef
 var sprite : MeshInstance3D
+var material : ShaderMaterial
 var map_pos : Vector2i
 var pos : Vector3 = Vector3.ZERO
 var view_pos : Vector3 = Vector3.ZERO
@@ -13,7 +14,9 @@ var one_sided : bool = false
 var ceiling_attach : bool = false
 var horizontal_mode : bool = false
 var scale : Vector2 = Vector2.ONE
-var color : Color = Color.WHITE
+var hue : float = 0.0
+var bias : float = 1.0
+var alpha : float = 1.0
 
 const CHANGE_SPEEDS : Array[float] = [0.01, 0.1, 1.0]
 
@@ -24,15 +27,14 @@ enum {
 	H_MODE = 3,
 	SCALE_H = 4,
 	SCALE_V = 5,
-	COLOR_MOD_R = 6,
-	COLOR_MOD_G = 7,
-	COLOR_MOD_B = 8,
-	COLOR_MOD_A = 9,
-	POS_X = 10,
-	POS_Y = 11,
-	POS_Z = 12,
-	ANGLE = 13,
-	MAX_PARAMETER = 14
+	COLOR_HUE = 6,
+	COLOR_BIAS = 7,
+	COLOR_ALPHA = 8,
+	POS_X = 9,
+	POS_Y = 10,
+	POS_Z = 11,
+	ANGLE = 12,
+	MAX_PARAMETER = 13
 }
 
 const SCALAR_PARAMETER : Array[bool] = [
@@ -66,14 +68,12 @@ static func parameter_string(val : int) -> String:
 			return "horizontal scale"
 		SCALE_V:
 			return "vertical scale"
-		COLOR_MOD_R:
-			return "color mod r"
-		COLOR_MOD_G:
-			return "color mod g"
-		COLOR_MOD_B:
-			return "color mod b"
-		COLOR_MOD_A:
-			return "color mod a"
+		COLOR_HUE:
+			return "color hue"
+		COLOR_BIAS:
+			return "color bias"
+		COLOR_ALPHA:
+			return "color alpha"
 		POS_X:
 			return "position x"
 		POS_Y:
@@ -111,13 +111,11 @@ static func value_string(parameter : int, val : Variant) -> String:
 			return "%.2f" % val
 		SCALE_V:
 			return "%.2f" % val
-		COLOR_MOD_R:
+		COLOR_HUE:
 			return "%.2f" % val
-		COLOR_MOD_G:
+		COLOR_BIAS:
 			return "%.2f" % val
-		COLOR_MOD_B:
-			return "%.2f" % val
-		COLOR_MOD_A:
+		COLOR_ALPHA:
 			return "%.2f" % val
 		POS_X:
 			return "%.2f" % val
@@ -130,16 +128,81 @@ static func value_string(parameter : int, val : Variant) -> String:
 
 	return "%s" % val
 
+func set_mesh_one_sided():
+	var mesh : PlaneMesh = PlaneMesh.new()
+	mesh.size = Vector2(1.0, 1.0)
+	mesh.center_offset = Vector3(0.0, 0.5, 0.0)
+	mesh.orientation = PlaneMesh.FACE_Z
+	mesh.material = material
+
+	sprite.mesh = mesh
+
+func set_mesh_two_sided():
+	var sizemul : Vector2 = def.sizemul
+
+	#Инициализируйте ArrayMesh.
+	var mesh_arrays = []
+	mesh_arrays.resize(Mesh.ARRAY_MAX)
+	mesh_arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([
+		Vector3(-sizemul.x, sizemul.y, 0.0),
+		Vector3(sizemul.x, sizemul.y, 0.0),
+		Vector3(-sizemul.x, 0.0, 0.0),
+
+		Vector3(-sizemul.x, 0.0, 0.0),
+		Vector3(sizemul.x, sizemul.y, 0.0),
+		Vector3(sizemul.x, 0.0, 0.0),
+
+		Vector3(sizemul.x, sizemul.y, 0.0),
+		Vector3(-sizemul.x, sizemul.y, 0.0),
+		Vector3(sizemul.x, 0.0, 0.0),
+
+		Vector3(sizemul.x, 0.0, 0.0),
+		Vector3(-sizemul.x, sizemul.y, 0.0),
+		Vector3(-sizemul.x, 0.0, 0.0)
+	])
+	mesh_arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([
+		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
+		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0)
+	])
+	mesh_arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([
+		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0),
+		Vector2(0.0, 1.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0),
+		Vector2(1.0, 0.0), Vector2(0.0, 0.0), Vector2(1.0, 1.0),
+		Vector2(1.0, 1.0), Vector2(0.0, 0.0), Vector2(0.0, 1.0)
+	])
+
+	# Создать сетку.
+	var mesh : ArrayMesh = ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh_arrays)
+	mesh.surface_set_material(0, material)
+
+	sprite.mesh = mesh
+
 func set_mesh():
 	if billboard or one_sided:
-		sprite.mesh = def.one_side_mesh
+		set_mesh_one_sided()
 	else:
-		sprite.mesh = def.two_side_mesh
+		set_mesh_two_sided()
 
 func _init(p_def : PropDef,
 		   p_map_pos : Vector2i):
 	def = p_def
 	map_pos = p_map_pos
+
+	material = ShaderMaterial.new()
+	var shader : Shader = load("res://prop.gdshader")
+	material.shader = shader
+	material.set_shader_parameter(&'tex', def.image)
+	material.set_shader_parameter(&'hue', hue)
+	material.set_shader_parameter(&'bias', bias)
+	material.set_shader_parameter(&'alpha', alpha)
+
+	#material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	#material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	#material.albedo_texture = def.image
+	#material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 
 	sprite = MeshInstance3D.new()
 	set_mesh()
@@ -195,6 +258,14 @@ func set_scale(p_scale : Vector2):
 	scale = p_scale
 	sprite.scale = Vector3(scale.x, scale.y, 1.0)
 
-func set_color(p_color : Color):
-	color = p_color
-	# TODO: Need to create a mesh + material for each prop to modify colors..
+func set_hue(p_hue : float):
+	hue = p_hue
+	material.set_shader_parameter(&'hue', hue)
+
+func set_bias(p_bias : float):
+	bias = p_bias
+	material.set_shader_parameter(&'bias', bias)
+
+func set_alpha(p_alpha : float):
+	alpha = p_alpha
+	material.set_shader_parameter(&'alpha', alpha)
