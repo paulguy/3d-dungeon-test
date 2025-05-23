@@ -3,6 +3,8 @@ extends Node3D
 # TODO: that ugly stripe along left of center (worked around with 2x MSAA, not "fixed")
 #       box select/operations
 
+const MAP_VERSION : int = 1
+
 const DEFAULT_EYE_HEIGHT : float = 0.5
 const PLAYER_HEIGHT : float = 0.8
 const CLIMB_HEIGHT : float = 0.5
@@ -385,6 +387,32 @@ func status_visibility(v : bool):
 	else:
 		hud_status.visible = false
 
+func get_eye_height() -> float:
+	if ceiling_attach:
+		return get_terrain_parameter(MapParameters.CEILING,
+									 MapParameters.HORIZ,
+									 MapParameters.BOTTOM,
+									 MapParameters.HEIGHT,
+									 pos) - eye_height
+
+	return get_terrain_parameter(MapParameters.FLOOR,
+								 MapParameters.HORIZ,
+								 MapParameters.TOP,
+								 MapParameters.HEIGHT,
+								 pos) + eye_height
+
+func set_pos():
+	terrain.set_pos(pos)
+	props.set_view_pos(pos)
+
+func set_dir():
+	terrain.set_dir(dir)
+	props.set_view_dir(dir)
+
+func set_eye_height():
+	terrain.set_eye_height(get_eye_height())
+	props.set_eye_height(get_eye_height())
+
 func set_env_bg_color():
 	# converted from shader
 	var fog_ratio : float = pow(MAX_DEPTH / (depth + 1.0), fog_power)
@@ -405,20 +433,6 @@ func set_fog_color():
 func set_fog_power():
 	terrain.set_fog_power(fog_power)
 	set_env_bg_color()
-
-func get_eye_height() -> float:
-	if ceiling_attach:
-		return get_terrain_parameter(MapParameters.CEILING,
-							 MapParameters.HORIZ,
-							 MapParameters.BOTTOM,
-							 MapParameters.HEIGHT,
-							 pos) - eye_height
-
-	return get_terrain_parameter(MapParameters.FLOOR,
-						 MapParameters.HORIZ,
-						 MapParameters.TOP,
-						 MapParameters.HEIGHT,
-						 pos) + eye_height
 
 func set_text_entry_mode(cb : Callable, prefix : String = "", def : String = ""):
 	text_entry_prefix = prefix
@@ -451,44 +465,253 @@ func _input(event : InputEvent):
 				text_entry_text = "%s%c" % [text_entry_text, key_event.unicode]
 				update_entry()
 
-func do_save(mapname : String):
+func get_alternate_eye_height() -> float:
+	var f_height : float = get_terrain_parameter(MapParameters.FLOOR,
+												MapParameters.HORIZ,
+												MapParameters.TOP,
+												MapParameters.HEIGHT,
+												pos)
+	var c_height : float = get_terrain_parameter(MapParameters.CEILING,
+												MapParameters.HORIZ,
+												MapParameters.BOTTOM,
+												MapParameters.HEIGHT,
+												pos)
+
+	return c_height - f_height - eye_height
+
+const TEMPCHARS : String = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const TEMPNUMCHARS : int = 6
+
+func make_temp_filename(template : String) -> String:
+	var tempname : String = String(template)
+	for i in TEMPNUMCHARS:
+		tempname = "%s%s" % [tempname, TEMPCHARS[randi_range(0, len(TEMPCHARS) - 1)]]
+
+	return tempname
+
+func write_string(writer : ZIPPacker, out : String) -> Error:
+	return writer.write_file(out.to_utf8_buffer())
+
+func save_global_params(writer : ZIPPacker) -> Error:
+	var err : Error
+
+	err = writer.start_file("info.txt")
+	if err != Error.OK:
+		return err
+
+	err = write_string(writer, ("version %d\n" % MAP_VERSION))
+	if err != Error.OK:
+		return err
+
+	err = write_string(writer, ("size %d %d\n" % [terrain.dims.x,
+												 terrain.dims.y]))
+
+	err = write_string(writer, ("pos %d %d\n" % [pos.x, pos.y]))
+	if err != Error.OK:
+		return err
+
+	err = write_string(writer, ("dir %d\n" % dir))
+	if err != Error.OK:
+		return err
+
+	err = write_string(writer, ("fog_color %f %f %f\n" % [fog_color.r,
+														 fog_color.g,
+														 fog_color.b]))
+	if err != Error.OK:
+		return err
+
+	err = write_string(writer, ("fog_power %f\n" % fog_power))
+	if err != Error.OK:
+		return err
+
+	# don't store ceiling attachment, but store the eye height as it would
+	# be seen
+	var real_eye_height = eye_height
+	if ceiling_attach:
+		real_eye_height = get_alternate_eye_height()
+	err = write_string(writer, ("eye_height %f\n" % real_eye_height))
+	if err != Error.OK:
+		return err
+
+	err = write_string(writer, ("textures %s\n" % textures))
+	if err != Error.OK:
+		return err
+
+	err = writer.close_file()
+	if err != Error.OK:
+		return err
+
+	return Error.OK
+
+func savemap(mapname : String) -> Error:
+	var err : Error
 	last_mapname = mapname
 
-	# don't store ceiling attachment, but store the eye height as it would be
-	# seen
-	var err : Error = terrain.save_map(mapname, textures,
-									   pos, dir,
-									   fog_color, fog_power,
-									   get_eye_height())
+	var tempname : String = make_temp_filename("%s-" % mapname)
+	var writer : ZIPPacker = ZIPPacker.new()
+	err = writer.open("user://%s.zip" % tempname)
+	if err != Error.OK:
+		return err
+
+	err = save_global_params(writer)
+	if err != Error.OK:
+		return err
+
+	err = terrain.save_map(writer)
+	if err != Error.OK:
+		return err
+
+	writer.close()
+
+	var userdir : DirAccess = DirAccess.open("user://")
+	userdir.rename("%s.zip" % tempname, "%s.zip" % mapname)
+
+	return Error.OK
+
+func do_save(mapname : String):
+	var err : Error = savemap(mapname)
 	if err != Error.OK:
 		status("Save failed: %s" % error_string(err))
 	else:
 		status("Map %s saved" % mapname)
 
-func do_load(mapname : String):
+const TRUTHY_NAMES : Array[String] = [
+	'true',
+	'yes',
+	'on'
+]
+
+func update_dict_from_line(dict : Dictionary[StringName, Variant],
+						   key : StringName,
+						   line : String,
+						   type : int):
+	var parts : PackedStringArray = line.split(' ', true, 1)
+	var vals : PackedStringArray
+
+	if len(parts) == 0:
+		return
+
+	var got_key : String = parts[0].strip_edges().to_lower()
+	if got_key != key:
+		return
+
+	if len(parts) == 1:
+		if type == TYPE_BOOL:
+			dict[key] = true
+		return
+
+	match type:
+		TYPE_INT:
+			if parts[1].is_valid_int():
+				dict[key] = parts[1].to_int()
+		TYPE_FLOAT:
+			if parts[1].is_valid_float():
+				dict[key] = parts[1].to_float()
+		TYPE_BOOL:
+			if parts[1].is_valid_int():
+				if parts[1].to_int():
+					dict[key] = true
+				else:
+					dict[key] = false
+			else:
+				if parts[1].strip_edges().to_lower() in TRUTHY_NAMES:
+					dict[key] = true
+		TYPE_VECTOR2I:
+			vals = parts[1].split(' ', true)
+			if len(vals) >= 2 and \
+			   vals[0].is_valid_int() and \
+			   vals[1].is_valid_int():
+				dict[key] = Vector2i(vals[0].to_int(), vals[1].to_int())
+		TYPE_COLOR:
+			vals = parts[1].split(' ', true)
+			if len(vals) >= 3 and \
+			   vals[0].is_valid_float() and \
+			   vals[1].is_valid_float() and \
+			   vals[2].is_valid_float():
+				dict[key] = Color(vals[0].to_float(),
+								  vals[1].to_float(),
+								  vals[2].to_float())
+		TYPE_STRING:
+			dict[key] = parts[1].strip_edges()
+
+func loadmap(mapname : String) -> Error:
+	var err : Error
 	last_mapname = mapname
 
-	var result : Dictionary[StringName, Variant] = terrain.load_map(mapname)
-	if result[&'error'] != Error.OK:
-		status("Load failed: %s" % error_string(result[&'error']))
+	var mapsize : Vector2i
+	var mappos : Vector2i
+
+	var reader = ZIPReader.new()
+	err = reader.open("user://%s.zip" % mapname)
+	if err != OK:
+		return err
+
+	var info : Dictionary[StringName, Variant] = {}
+	var info_file : String = reader.read_file("info.txt").get_string_from_utf8()
+
+	for line in info_file.split('\n', false):
+		update_dict_from_line(info, &'version', line, TYPE_INT)
+		update_dict_from_line(info, &'size', line, TYPE_VECTOR2I)
+		update_dict_from_line(info, &'pos', line, TYPE_VECTOR2I)
+		update_dict_from_line(info, &'dir', line, TYPE_INT)
+		update_dict_from_line(info, &'fog_color', line, TYPE_COLOR)
+		update_dict_from_line(info, &'fog_power', line, TYPE_FLOAT)
+		update_dict_from_line(info, &'eye_height', line, TYPE_FLOAT)
+		update_dict_from_line(info, &'textures', line, TYPE_STRING)
+
+	if (&'version' not in info or info[&'version'] != MAP_VERSION) or \
+	   (&'size' not in info):
+		return Error.ERR_FILE_UNRECOGNIZED
+
+	mapsize = info[&'size']
+	if mapsize.x < 1 or mapsize.y < 1:
+		return Error.ERR_FILE_UNRECOGNIZED
+
+	err = terrain.load_map(reader, mapsize)
+	if err != Error.OK:
+		return err
 	else:
-		for item in props.get_children():
-			item.queue_free()
+		props.clear_props()
 		set_prop_defs([respropdefs,
 					   userpropdefs,
 					   scan_props_dir('map', "user://%s.zip" % mapname),
 					   scan_props_dir('mapuser', "user://".path_join(PROPS_DIR).path_join(mapname))])
 
-		if &'pos' in result:
-			pos = result[&'pos']
-		if &'dir' in result:
-			dir = result[&'dir']
-		if &'fog_power' in result:
-			fog_power = result[&'fog_power']
-		if &'fog_color' in result:
-			fog_color = result[&'fog_color']
-		if &'eye_height' in result:
-			eye_height = result[&'eye_height']
+	terrain.apply_staged()
+
+	if &'pos' in info:
+		mappos = info[&'pos']
+		if mappos.x >= 0 and mappos.x < mapsize.x and \
+		   mappos.y >= 0 and mappos.y < mapsize.y:
+			pos = mappos
+			set_pos()
+	if &'dir' in info:
+		dir = info[&'dir']
+		set_dir()
+	if &'fog_power' in info:
+		fog_power = info[&'fog_power']
+		set_fog_power()
+	if &'fog_color' in info:
+		fog_color = info[&'fog_color']
+		set_fog_color()
+	if &'eye_height' in info and &'pos' in info:
+		eye_height = info[&'eye_height']
+		set_eye_height()
+	else:
+		info.erase(&'eye_height')
+	if &'textures' in info:
+		terrain.set_texture(info[&'textures'], reader, mapname)
+
+	reader.close()
+
+	return Error.OK
+
+func do_load(mapname : String):
+	var err : Error = loadmap(mapname)
+	if err != Error.OK:
+		terrain.discard_staged()
+		status("Load failed: %s" % error_string(err))
+	else:
 		status("Map %s loaded" % mapname)
 
 func do_store(num : String):
@@ -558,6 +781,7 @@ func phys_move(d_pos : Vector2i):
 		pos = d_pos
 
 		terrain.set_eye_height(play_height + DEFAULT_EYE_HEIGHT)
+		props.set_eye_height(play_height + DEFAULT_EYE_HEIGHT)
 
 func move(f_amount : int, s_amount : int = 0, physics : bool = false):
 	var d_pos : Vector2i = pos
@@ -655,42 +879,29 @@ func editor_common_process() -> Array[Variant]:
 		update_eye_height = true
 
 	if Input.is_action_just_pressed(&'view attach toggle'):
-		var f_height : float = get_terrain_parameter(MapParameters.FLOOR,
-											MapParameters.HORIZ,
-											MapParameters.TOP,
-											MapParameters.HEIGHT,
-											pos)
-		var c_height : float = get_terrain_parameter(MapParameters.CEILING,
-											MapParameters.HORIZ,
-											MapParameters.BOTTOM,
-											MapParameters.HEIGHT,
-											pos)
-
-		eye_height = c_height - f_height - eye_height
+		eye_height = get_alternate_eye_height()
 		ceiling_attach = not ceiling_attach
 		update_eye_height = true
 
 	if update_pos:
-		terrain.set_pos(pos)
-		props.set_view_pos(pos)
+		set_pos()
 		update_eye_height = true
 		if len(propnames) > 0:
 			selected_prop = 0
 		status()
 
 	if update_dir:
-		terrain.set_dir(dir)
-		props.set_view_dir(dir)
+		set_dir()
 		if len(propnames) > 0:
 			selected_prop = 0
 		status()
 
 	if update_eye_height:
-		terrain.set_eye_height(get_eye_height())
-		props.set_view_height(eye_height)
+		set_eye_height()
 
 	if Input.is_action_just_pressed(&'save'):
 		set_text_entry_mode(do_save, "Save", last_mapname)
+
 		return [false, false, 0]
 
 	if Input.is_action_just_pressed(&'load'):
@@ -1142,10 +1353,10 @@ func play_process(delta : float):
 			update_dir = true
 
 		if update_pos:
-			terrain.set_pos(pos)
+			set_pos()
 
 		if update_dir:
-			terrain.set_dir(dir)
+			set_dir()
 
 func scan_props():
 	respropdefs = scan_props_dir("res", "res://".path_join(PROPS_DIR))
@@ -1169,7 +1380,7 @@ func _ready():
 	props.heightmap = terrain.images[&'face_heights']
 	props.set_view_pos(pos)
 	props.set_view_dir(dir)
-	props.set_view_height(eye_height)
+	props.set_eye_height(eye_height)
 
 	status()
 

@@ -5,10 +5,10 @@ var heightmap : Image
 var mapsize : Vector2i
 var positions : Array[Array]
 var offsets : Array[int]
-var props : Dictionary[Vector2i, Array]
+var props : Dictionary[Vector2i, Array] = {}
 var view_pos : Vector2i = Vector2i.ZERO
 var view_dir : int = 0
-var view_height : float = 0.0
+var eye_height : float = 0.0
 
 @onready var visible_node : Node3D = $'Visible'
 @onready var invisible_node : Node3D = $'Invisible'
@@ -28,15 +28,22 @@ func set_view_positions(p : Array[Vector2i]):
 			last_y = item.y
 		last_x = item.x
 
+func clear_props():
+	for p in visible_node.get_children():
+		p.queue_free()
+	for p in invisible_node.get_children():
+		p.queue_free()
+	props = {}
+
 func update_view_pos(prop : Prop):
 	var prop_view_pos : Vector2i = prop.map_pos - view_pos
 	var height : float
 	if prop.ceiling_attach:
 		# ceiling mesh bottom is green channel
-		height = heightmap.get_pixelv(prop.map_pos).g - view_height
+		height = heightmap.get_pixelv(prop.map_pos).g - eye_height
 	else:
 		# floor mesh top is blue channel
-		height = heightmap.get_pixelv(prop.map_pos).b - view_height
+		height = heightmap.get_pixelv(prop.map_pos).b - eye_height
 
 	if view_dir == DirParameters.SOUTH:
 		# looking down +Z
@@ -162,8 +169,8 @@ func set_view_pos(pos : Vector2i):
 	view_pos = pos
 	update_view()
 
-func set_view_height(height : float):
-	view_height = height
+func set_eye_height(height : float):
+	eye_height = height
 	execute_each_visible(update_view_pos)
 
 func has_prop(prop_pos : Vector2i, idx : int) -> bool:
