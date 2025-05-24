@@ -617,8 +617,14 @@ func loadmap(mapname : String) -> Error:
 			pos = mappos
 			if &'eye_height' in info:
 				eye_height = info[&'eye_height']
+			# don't call props view_pos/view_dir to avoid a
+			# redundant rescan just to throw it away
+			props.view_pos = pos
+			terrain.set_pos(pos)
 	if &'dir' in info:
 		dir = info[&'dir']
+		props.view_dir = dir
+		terrain.set_dir(dir)
 	if &'fog_power' in info:
 		fog_power = info[&'fog_power']
 		set_fog_power()
@@ -643,9 +649,7 @@ func loadmap(mapname : String) -> Error:
 	props.heightmap = terrain.images[&'face_heights']
 	props.apply_staged(propdefs)
 
-	# these depend on values in terrain and props being up to date
-	set_pos()
-	set_dir()
+	# this depends on values in terrain and props being up to date
 	set_eye_height()
 
 	return Error.OK

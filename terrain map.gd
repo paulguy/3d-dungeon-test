@@ -150,9 +150,11 @@ func set_texture(texturename, reader = null, mapname = null):
 				image = Image.new()
 
 		if image.get_data_size() == 0:
-			err = image.load("user://mods".path_join(mapname).path_join(filename))
-			if err != Error.OK:
-				image = Image.new()
+			var modname : String = "user://mods".path_join(mapname).path_join(filename)
+			if FileAccess.file_exists(modname):
+				err = image.load(modname)
+				if err != Error.OK:
+					image = Image.new()
 
 	if image.get_data_size() == 0:
 		terrain.set_texture(load("res://".path_join(filename)))
