@@ -297,3 +297,41 @@ func set_bias(p_bias : float):
 func set_alpha(p_alpha : float):
 	alpha = p_alpha
 	material.set_shader_parameter(&'alpha', alpha)
+
+func get_all() -> Dictionary:
+	return {
+		&'name': def.name,
+		&'pos': pos,
+		&'angle': angle,
+		&'billboard': billboard,
+		&'one-sided': one_sided,
+		&'ceiling-attach': ceiling_attach,
+		&'horizontal-mode': horizontal_mode,
+		&'scale': scale,
+		&'hue': hue,
+		&'bias': bias,
+		&'alpha': alpha
+	}
+
+func set_all(s_prop : Dictionary, heights : Color):
+	# these all execute many of the same functions so just set the
+	# values then run all the functions to update everything once
+	pos = s_prop[&'pos']
+	angle = s_prop[&'angle']
+	billboard = s_prop[&'billboard']
+	one_sided = s_prop[&'one-sided']
+	horizontal_mode = s_prop[&'horizontal-mode']
+
+	if s_prop[&'ceiling-attach']:
+		# this calls update_pos
+		toggle_ceiling_attach(heights.g, heights.b)
+	else:
+		update_pos()
+	set_mesh()
+	update_angle()
+
+	# these don't cascade any additional unnecessary updates
+	set_scale(s_prop[&'scale'])
+	set_hue(s_prop[&'hue'])
+	set_bias(s_prop[&'bias'])
+	set_alpha(s_prop[&'alpha'])

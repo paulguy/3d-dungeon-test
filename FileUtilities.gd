@@ -16,14 +16,32 @@ static func make_temp_filename(template : String) -> String:
 
 	return tempname
 
-static func write_string(writer : ZIPPacker, out : String) -> Error:
-	return writer.write_file(out.to_utf8_buffer())
+static func write_line(writer : ZIPPacker, out : String) -> Error:
+	return writer.write_file(("%s\n" % out).to_utf8_buffer())
+
+static func make_line(key : StringName, value : Variant) -> String:
+	match typeof(value):
+		TYPE_FLOAT:
+			return "%s %f" % [key, value]
+		TYPE_VECTOR2:
+			return "%s %f %f" % [key, value.x, value.y]
+		TYPE_VECTOR2I:
+			return "%s %d %d" % [key, value.x, value.y]
+		TYPE_VECTOR3:
+			return "%s %f %f %f" % [key, value.x, value.y, value.z]
+		TYPE_VECTOR3I:
+			return "%s %d %d %d" % [key, value.x, value.y, value.z]
+
+	# STRING, BOOL, anything else
+	return "%s %s" % [key, value]
 
 static func update_dict_from_line(dict : Dictionary, #[StringName, Variant],
 								  key : StringName,
 								  line : String,
 								  type : int):
 	var parts : PackedStringArray = line.split(' ', true, 1)
+	parts[0] = parts[0].strip_edges()
+	parts[1] = parts[1].strip_edges()
 	var vals : PackedStringArray
 
 	if len(parts) == 0:
@@ -58,18 +76,25 @@ static func update_dict_from_line(dict : Dictionary, #[StringName, Variant],
 					dict[key] = false
 		TYPE_VECTOR2I:
 			vals = parts[1].split(' ', true)
+			vals[0] = vals[0].strip_edges()
+			vals[1] = vals[1].strip_edges()
 			if len(vals) >= 2 and \
 			   vals[0].is_valid_int() and \
 			   vals[1].is_valid_int():
 				dict[key] = Vector2i(vals[0].to_int(), vals[1].to_int())
 		TYPE_VECTOR2:
 			vals = parts[1].split(' ', true)
+			vals[0] = vals[0].strip_edges()
+			vals[1] = vals[1].strip_edges()
 			if len(vals) >= 2 and \
 			   vals[0].is_valid_float() and \
 			   vals[1].is_valid_float():
 				dict[key] = Vector2(vals[0].to_float(), vals[1].to_float())
 		TYPE_VECTOR3:
 			vals = parts[1].split(' ', true)
+			vals[0] = vals[0].strip_edges()
+			vals[1] = vals[1].strip_edges()
+			vals[2] = vals[2].strip_edges()
 			if len(vals) >= 3 and \
 			   vals[0].is_valid_float() and \
 			   vals[1].is_valid_float() and \
@@ -79,6 +104,9 @@ static func update_dict_from_line(dict : Dictionary, #[StringName, Variant],
 									vals[2].to_float())
 		TYPE_COLOR:
 			vals = parts[1].split(' ', true)
+			vals[0] = vals[0].strip_edges()
+			vals[1] = vals[1].strip_edges()
+			vals[2] = vals[2].strip_edges()
 			if len(vals) >= 3 and \
 			   vals[0].is_valid_float() and \
 			   vals[1].is_valid_float() and \

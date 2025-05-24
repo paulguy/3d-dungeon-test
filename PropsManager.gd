@@ -47,22 +47,23 @@ func update_view_pos(prop : Prop):
 		# floor mesh top is blue channel
 		height = heightmap.get_pixelv(prop.map_pos).b - eye_height
 
-	if view_dir == DirParameters.SOUTH:
-		# looking down +Z
-		prop.set_view_pos(Vector3(prop_view_pos.x, height, prop_view_pos.y))
-		prop.set_view_angle(0.0)
-	elif view_dir == DirParameters.NORTH:
-		# looking down -Z
-		prop.set_view_pos(Vector3(-prop_view_pos.x, height, -prop_view_pos.y))
-		prop.set_view_angle(PI)
-	elif view_dir == DirParameters.EAST:
-		# looking down +X
-		prop.set_view_pos(Vector3(-prop_view_pos.y, height, prop_view_pos.x))
-		prop.set_view_angle(PI * 1.5)
-	else: # WEST
-		# looking down -X
-		prop.set_view_pos(Vector3(prop_view_pos.y, height, -prop_view_pos.x))
-		prop.set_view_angle(PI * 0.5)
+	match view_dir:
+		DirParameters.SOUTH:
+			# looking down +Z
+			prop.set_view_pos(Vector3(prop_view_pos.x, height, prop_view_pos.y))
+			prop.set_view_angle(0.0)
+		DirParameters.NORTH:
+			# looking down -Z
+			prop.set_view_pos(Vector3(-prop_view_pos.x, height, -prop_view_pos.y))
+			prop.set_view_angle(PI)
+		DirParameters.EAST:
+			# looking down +X
+			prop.set_view_pos(Vector3(-prop_view_pos.y, height, prop_view_pos.x))
+			prop.set_view_angle(PI * 1.5)
+		_: # WEST
+			# looking down -X
+			prop.set_view_pos(Vector3(prop_view_pos.y, height, -prop_view_pos.x))
+			prop.set_view_angle(PI * 0.5)
 
 func make_visible(prop : Prop):
 	update_view_pos(prop)
@@ -137,7 +138,7 @@ func execute_if_prop_visible(prop : Prop,
 							 callable : Callable):
 	execute_if_pos_visible(prop.map_pos, callable, prop)
 
-func add_prop(propdef : PropDef, map_pos : Vector2i):
+func add_prop(propdef : PropDef, map_pos : Vector2i) -> int:
 	if not map_pos in props:
 		# if position has no props, create the array first
 		props[map_pos] = []
@@ -149,6 +150,25 @@ func add_prop(propdef : PropDef, map_pos : Vector2i):
 	invisible_node.add_child(prop.sprite)
 
 	execute_if_prop_visible(prop, make_visible)
+
+	return len(props[map_pos]) - 1
+
+func delete_prop(map_pos : Vector2i, idx : int) -> int:
+	if not has_prop(map_pos, idx):
+		return -1
+
+	var cell : Array = props[map_pos]
+	var prop : Prop = cell[idx]
+	prop.sprite.get_parent().remove_child(prop.sprite)
+	cell.remove_at(idx)
+	if len(cell) == 0:
+		props.erase(map_pos)
+		return -1
+
+	if idx == len(cell):
+		idx -= 1
+
+	return idx
 
 func update_view():
 	# make everything invisible
@@ -265,6 +285,17 @@ func set_alpha(prop_pos : Vector2i, idx : int, alpha : float):
 	if has_prop(prop_pos, idx):
 		props[prop_pos][idx].set_alpha(alpha)
 
+func get_all(prop_pos : Vector2i, idx : int) -> Dictionary:
+	if has_prop(prop_pos, idx):
+		return props[prop_pos][idx].get_all()
+
+	return {}
+
+func set_all(prop_pos : Vector2i, idx : int, propdict : Dictionary):
+	if has_prop(prop_pos, idx):
+		var heights : Color = heightmap.get_pixelv(prop_pos)
+		props[prop_pos][idx].set_all(propdict, heights)
+
 func save_props(writer : ZIPPacker):
 	var err : Error
 
@@ -273,57 +304,17 @@ func save_props(writer : ZIPPacker):
 		return err
 
 	for loc in props.keys():
-		err = FileUtilities.write_string(writer, ("location %d %d\n" % [loc.x, loc.y]))
+		err = FileUtilities.write_line(writer, ("location %d %d" % [loc.x, loc.y]))
 		if err != Error.OK:
 			return err
 
 		for prop in props[loc]:
-			err = FileUtilities.write_string(writer, ("name %s\n" % [prop.def.name]))
-			if err != Error.OK:
-				return err
-
-			err = FileUtilities.write_string(writer, ("pos %f %f %f\n" % [prop.pos.x,
-																		 prop.pos.y,
-																		 prop.pos.z]))
-			if err != Error.OK:
-				return err
-
-			err = FileUtilities.write_string(writer, ("angle %f\n" % prop.angle))
-			if err != Error.OK:
-				return err
-
-			err = FileUtilities.write_string(writer, ("billboard %s\n" % prop.billboard))
-			if err != Error.OK:
-				return err
-
-			err = FileUtilities.write_string(writer, ("one-sided %s\n" % prop.one_sided))
-			if err != Error.OK:
-				return err
-
-			err = FileUtilities.write_string(writer, ("ceiling-attach %s\n" % prop.ceiling_attach))
-			if err != Error.OK:
-				return err
-
-			err = FileUtilities.write_string(writer, ("horizontal-mode %s\n" % prop.horizontal_mode))
-			if err != Error.OK:
-				return err
-
-			err = FileUtilities.write_string(writer, ("scale %f %f\n" % [prop.scale.x,
-																		prop.scale.y]))
-			if err != Error.OK:
-				return err
-
-			err = FileUtilities.write_string(writer, ("hue %f\n" % prop.hue))
-			if err != Error.OK:
-				return err
-
-			err = FileUtilities.write_string(writer, ("bias %f\n" % prop.bias))
-			if err != Error.OK:
-				return err
-
-			err = FileUtilities.write_string(writer, ("alpha %f\n" % prop.alpha))
-			if err != Error.OK:
-				return err
+			var propdict : Dictionary = prop.get_all()
+			for key in propdict.keys():
+				err = FileUtilities.write_line(writer,
+											   FileUtilities.make_line(key, propdict[key]))
+				if err != Error.OK:
+					return err
 
 	err = writer.close_file()
 	if err != Error.OK:
@@ -363,8 +354,9 @@ func try_create_prop(dictbox : Array[Dictionary], location) -> Error:
 		staging_props[location].append(dict)
 
 		dictbox[0] = {}
+		return Error.OK
 
-	return Error.OK
+	return Error.ERR_SKIP
 
 func load_props(reader : ZIPReader) -> Error:
 	var err : Error
@@ -381,13 +373,14 @@ func load_props(reader : ZIPReader) -> Error:
 		FileUtilities.update_dict_from_line(dictbox[0], &'location', line, TYPE_VECTOR2I)
 		if &'location' in dictbox[0]:
 			location = dictbox[0][&'location']
-		err = try_create_prop(dictbox, location)
-		if err != Error.OK:
-			return err
 		for key in PROP_VALUES.keys():
 			FileUtilities.update_dict_from_line(dictbox[0], key, line, PROP_VALUES[key])
 			err = try_create_prop(dictbox, location)
-			if err != Error.OK:
+			if err == Error.OK:
+				break
+			elif err == Error.ERR_SKIP:
+				continue
+			else:
 				return err
 
 	if len(dictbox[0]) > 0:
@@ -399,31 +392,14 @@ func apply_staged(propdefs : Dictionary[StringName, PropDef]):
 	clear_props()
 
 	for location in staging_props.keys():
+		var heights : Color = heightmap.get_pixelv(location)
 		for s_prop in staging_props[location]:
-			add_prop(propdefs[s_prop[&'name']], location)
-			var prop : Prop = props[location][-1]
-			# these all execute many of the same functions so just set the
-			# values then run all the functions to update everything once
-			prop.pos = s_prop[&'pos']
-			prop.angle = s_prop[&'angle']
-			prop.billboard = s_prop[&'billboard']
-			prop.one_sided = s_prop[&'one-sided']
-			prop.horizontal_mode = s_prop[&'horizontal-mode']
-
-			if s_prop[&'ceiling-attach']:
-				var heights : Color = heightmap.get_pixelv(location)
-				# this calls update_pos
-				prop.toggle_ceiling_attach(heights.g, heights.b)
+			if not s_prop[&'name'] in propdefs:
+				add_prop(propdefs[&'error'], location)
 			else:
-				prop.update_pos()
-			prop.set_mesh()
-			prop.update_angle()
-
-			# these don't cascade any additional unnecessary updates
-			prop.set_scale(s_prop[&'scale'])
-			prop.set_hue(s_prop[&'hue'])
-			prop.set_bias(s_prop[&'bias'])
-			prop.set_alpha(s_prop[&'alpha'])
+				add_prop(propdefs[s_prop[&'name']], location)
+			var prop : Prop = props[location][-1]
+			prop.set_all(s_prop, heights)
 		# update various parameters for props in view
 		update_height(location)
 

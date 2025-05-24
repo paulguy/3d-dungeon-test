@@ -103,7 +103,10 @@ the selected placed prop in the cell, then finally the currently selected
 parameter.
 
 ```
-P - place prop
+P - place prop, hold shift to store selected prop and set prop definition
+    if a prop is stored, placing will place a prop with the selected prop
+    definition with all the stored prop parameter.
+Delete - delete selected prop, hold shift to clear stored prop
 J, L - move prop left, right +
 I, K - move prop away, towards +
 N, M - move prop down, up +

@@ -97,12 +97,12 @@ var propnames : Array[StringName]
 var selected_pdef : int = -1
 var selected_prop : int = -1
 var p_parameter : int = 0
+var stored_prop : Dictionary = {}
 
 var status_set : bool = false
 var status_str : String
 
-# TODO: delete props
-func add_prop(p : Dictionary[String, PropDef], pname : String, source : String, image : Texture2D):
+func add_prop_def(p : Dictionary[String, PropDef], pname : String, source : String, image : Texture2D):
 	pname = StringName(pname.get_basename())
 	p[pname] = PropDef.new(pname, source, image)
 
@@ -124,7 +124,7 @@ func scan_props_dir(source : String, path : String):
 				err = image.load_png_from_buffer(zipfile.read_file(filename))
 				if err != Error.OK:
 					continue
-				add_prop(p, filename.get_file(), source, ImageTexture.create_from_image(image))
+				add_prop_def(p, filename.get_file(), source, ImageTexture.create_from_image(image))
 		zipfile.close()
 	else:
 		var propdir : DirAccess = DirAccess.open(path)
@@ -137,10 +137,10 @@ func scan_props_dir(source : String, path : String):
 						image.load(path.path_join(filename))
 						if err != Error.OK:
 							continue
-						add_prop(p, filename, source, ImageTexture.create_from_image(image))
+						add_prop_def(p, filename, source, ImageTexture.create_from_image(image))
 					else:
 						# res:// paths don't need much
-						add_prop(p, filename, source, load(path.path_join(filename)))
+						add_prop_def(p, filename, source, load(path.path_join(filename)))
 
 	return p
 
@@ -486,30 +486,30 @@ func save_global_params(writer : ZIPPacker) -> Error:
 	if err != Error.OK:
 		return err
 
-	err = FileUtilities.write_string(writer, ("version %d\n" % MAP_VERSION))
+	err = FileUtilities.write_line(writer, ("version %d" % MAP_VERSION))
 	if err != Error.OK:
 		return err
 
-	err = FileUtilities.write_string(writer, ("size %d %d\n" % [terrain.dims.x,
-															   terrain.dims.y]))
+	err = FileUtilities.write_line(writer, ("size %d %d" % [terrain.dims.x,
+														   terrain.dims.y]))
 	if err != Error.OK:
 		return err
 
-	err = FileUtilities.write_string(writer, ("pos %d %d\n" % [pos.x, pos.y]))
+	err = FileUtilities.write_line(writer, ("pos %d %d" % [pos.x, pos.y]))
 	if err != Error.OK:
 		return err
 
-	err = FileUtilities.write_string(writer, ("dir %d\n" % dir))
+	err = FileUtilities.write_line(writer, ("dir %d" % dir))
 	if err != Error.OK:
 		return err
 
-	err = FileUtilities.write_string(writer, ("fog_color %f %f %f\n" % [fog_color.r,
-																	   fog_color.g,
-																	   fog_color.b]))
+	err = FileUtilities.write_line(writer, ("fog_color %f %f %f" % [fog_color.r,
+																   fog_color.g,
+																   fog_color.b]))
 	if err != Error.OK:
 		return err
 
-	err = FileUtilities.write_string(writer, ("fog_power %f\n" % fog_power))
+	err = FileUtilities.write_line(writer, ("fog_power %f" % fog_power))
 	if err != Error.OK:
 		return err
 
@@ -518,11 +518,11 @@ func save_global_params(writer : ZIPPacker) -> Error:
 	var real_eye_height = eye_height
 	if ceiling_attach:
 		real_eye_height = get_alternate_eye_height()
-	err = FileUtilities.write_string(writer, ("eye_height %f\n" % real_eye_height))
+	err = FileUtilities.write_line(writer, ("eye_height %f" % real_eye_height))
 	if err != Error.OK:
 		return err
 
-	err = FileUtilities.write_string(writer, ("textures %s\n" % textures))
+	err = FileUtilities.write_line(writer, ("textures %s" % textures))
 	if err != Error.OK:
 		return err
 
@@ -584,6 +584,7 @@ func loadmap(mapname : String) -> Error:
 	var info_file : String = reader.read_file("info.txt").get_string_from_utf8()
 
 	for line in info_file.split('\n', false):
+		print(line)
 		FileUtilities.update_dict_from_line(info, &'version', line, TYPE_INT)
 		FileUtilities.update_dict_from_line(info, &'size', line, TYPE_VECTOR2I)
 		FileUtilities.update_dict_from_line(info, &'pos', line, TYPE_VECTOR2I)
@@ -593,6 +594,7 @@ func loadmap(mapname : String) -> Error:
 		FileUtilities.update_dict_from_line(info, &'eye_height', line, TYPE_FLOAT)
 		FileUtilities.update_dict_from_line(info, &'textures', line, TYPE_STRING)
 
+	print(info)
 	if (&'version' not in info or info[&'version'] != MAP_VERSION) or \
 	   (&'size' not in info):
 		return Error.ERR_FILE_UNRECOGNIZED
@@ -1158,10 +1160,32 @@ func props_process(_delta : float):
 	# TODO: alternate for copy prop as new default (then find a key to reset)
 	if Input.is_action_just_pressed(&'place prop'):
 		var prop_pos : Vector2i = get_facing_pos()
-		props.add_prop(propdefs[propnames[selected_pdef]], prop_pos)
-		if selected_prop < 0:
-			selected_prop = 0
+		if alternate:
+			stored_prop = props.get_all(prop_pos, selected_prop)
+			selected_pdef = propnames.find(stored_prop[&'name'])
+		else:
+			selected_prop = props.add_prop(propdefs[propnames[selected_pdef]], prop_pos)
+			if len(stored_prop) > 0:
+				props.set_all(prop_pos, selected_prop, stored_prop)
+			else:
+				match dir:
+					DirParameters.NORTH:
+						pass
+					DirParameters.SOUTH:
+						props.set_angle(prop_pos, selected_prop, PI)
+					DirParameters.WEST:
+						props.set_angle(prop_pos, selected_prop, PI * 0.5)
+					_: # EAST
+						props.set_angle(prop_pos, selected_prop, PI * 1.5)
 		status()
+
+	if Input.is_action_just_pressed(&'delete'):
+		if alternate:
+			stored_prop = {}
+		else:
+			var prop_pos : Vector2i = get_facing_pos()
+			selected_prop = props.delete_prop(prop_pos, selected_prop)
+			status()
 
 	if Input.is_action_just_pressed(&'cycle prop parameter'):
 		if alternate:
