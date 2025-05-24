@@ -479,19 +479,6 @@ func get_alternate_eye_height() -> float:
 
 	return c_height - f_height - eye_height
 
-const TEMPCHARS : String = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const TEMPNUMCHARS : int = 6
-
-func make_temp_filename(template : String) -> String:
-	var tempname : String = String(template)
-	for i in TEMPNUMCHARS:
-		tempname = "%s%s" % [tempname, TEMPCHARS[randi_range(0, len(TEMPCHARS) - 1)]]
-
-	return tempname
-
-func write_string(writer : ZIPPacker, out : String) -> Error:
-	return writer.write_file(out.to_utf8_buffer())
-
 func save_global_params(writer : ZIPPacker) -> Error:
 	var err : Error
 
@@ -499,28 +486,30 @@ func save_global_params(writer : ZIPPacker) -> Error:
 	if err != Error.OK:
 		return err
 
-	err = write_string(writer, ("version %d\n" % MAP_VERSION))
+	err = FileUtilities.write_string(writer, ("version %d\n" % MAP_VERSION))
 	if err != Error.OK:
 		return err
 
-	err = write_string(writer, ("size %d %d\n" % [terrain.dims.x,
-												 terrain.dims.y]))
-
-	err = write_string(writer, ("pos %d %d\n" % [pos.x, pos.y]))
+	err = FileUtilities.write_string(writer, ("size %d %d\n" % [terrain.dims.x,
+															   terrain.dims.y]))
 	if err != Error.OK:
 		return err
 
-	err = write_string(writer, ("dir %d\n" % dir))
+	err = FileUtilities.write_string(writer, ("pos %d %d\n" % [pos.x, pos.y]))
 	if err != Error.OK:
 		return err
 
-	err = write_string(writer, ("fog_color %f %f %f\n" % [fog_color.r,
-														 fog_color.g,
-														 fog_color.b]))
+	err = FileUtilities.write_string(writer, ("dir %d\n" % dir))
 	if err != Error.OK:
 		return err
 
-	err = write_string(writer, ("fog_power %f\n" % fog_power))
+	err = FileUtilities.write_string(writer, ("fog_color %f %f %f\n" % [fog_color.r,
+																	   fog_color.g,
+																	   fog_color.b]))
+	if err != Error.OK:
+		return err
+
+	err = FileUtilities.write_string(writer, ("fog_power %f\n" % fog_power))
 	if err != Error.OK:
 		return err
 
@@ -529,11 +518,11 @@ func save_global_params(writer : ZIPPacker) -> Error:
 	var real_eye_height = eye_height
 	if ceiling_attach:
 		real_eye_height = get_alternate_eye_height()
-	err = write_string(writer, ("eye_height %f\n" % real_eye_height))
+	err = FileUtilities.write_string(writer, ("eye_height %f\n" % real_eye_height))
 	if err != Error.OK:
 		return err
 
-	err = write_string(writer, ("textures %s\n" % textures))
+	err = FileUtilities.write_string(writer, ("textures %s\n" % textures))
 	if err != Error.OK:
 		return err
 
@@ -547,13 +536,17 @@ func savemap(mapname : String) -> Error:
 	var err : Error
 	last_mapname = mapname
 
-	var tempname : String = make_temp_filename("%s-" % mapname)
+	var tempname : String = FileUtilities.make_temp_filename("%s-" % mapname)
 	var writer : ZIPPacker = ZIPPacker.new()
 	err = writer.open("user://%s.zip" % tempname)
 	if err != Error.OK:
 		return err
 
 	err = save_global_params(writer)
+	if err != Error.OK:
+		return err
+
+	err = props.save_props(writer)
 	if err != Error.OK:
 		return err
 
@@ -575,65 +568,6 @@ func do_save(mapname : String):
 	else:
 		status("Map %s saved" % mapname)
 
-const TRUTHY_NAMES : Array[String] = [
-	'true',
-	'yes',
-	'on'
-]
-
-func update_dict_from_line(dict : Dictionary[StringName, Variant],
-						   key : StringName,
-						   line : String,
-						   type : int):
-	var parts : PackedStringArray = line.split(' ', true, 1)
-	var vals : PackedStringArray
-
-	if len(parts) == 0:
-		return
-
-	var got_key : String = parts[0].strip_edges().to_lower()
-	if got_key != key:
-		return
-
-	if len(parts) == 1:
-		if type == TYPE_BOOL:
-			dict[key] = true
-		return
-
-	match type:
-		TYPE_INT:
-			if parts[1].is_valid_int():
-				dict[key] = parts[1].to_int()
-		TYPE_FLOAT:
-			if parts[1].is_valid_float():
-				dict[key] = parts[1].to_float()
-		TYPE_BOOL:
-			if parts[1].is_valid_int():
-				if parts[1].to_int():
-					dict[key] = true
-				else:
-					dict[key] = false
-			else:
-				if parts[1].strip_edges().to_lower() in TRUTHY_NAMES:
-					dict[key] = true
-		TYPE_VECTOR2I:
-			vals = parts[1].split(' ', true)
-			if len(vals) >= 2 and \
-			   vals[0].is_valid_int() and \
-			   vals[1].is_valid_int():
-				dict[key] = Vector2i(vals[0].to_int(), vals[1].to_int())
-		TYPE_COLOR:
-			vals = parts[1].split(' ', true)
-			if len(vals) >= 3 and \
-			   vals[0].is_valid_float() and \
-			   vals[1].is_valid_float() and \
-			   vals[2].is_valid_float():
-				dict[key] = Color(vals[0].to_float(),
-								  vals[1].to_float(),
-								  vals[2].to_float())
-		TYPE_STRING:
-			dict[key] = parts[1].strip_edges()
-
 func loadmap(mapname : String) -> Error:
 	var err : Error
 	last_mapname = mapname
@@ -650,14 +584,14 @@ func loadmap(mapname : String) -> Error:
 	var info_file : String = reader.read_file("info.txt").get_string_from_utf8()
 
 	for line in info_file.split('\n', false):
-		update_dict_from_line(info, &'version', line, TYPE_INT)
-		update_dict_from_line(info, &'size', line, TYPE_VECTOR2I)
-		update_dict_from_line(info, &'pos', line, TYPE_VECTOR2I)
-		update_dict_from_line(info, &'dir', line, TYPE_INT)
-		update_dict_from_line(info, &'fog_color', line, TYPE_COLOR)
-		update_dict_from_line(info, &'fog_power', line, TYPE_FLOAT)
-		update_dict_from_line(info, &'eye_height', line, TYPE_FLOAT)
-		update_dict_from_line(info, &'textures', line, TYPE_STRING)
+		FileUtilities.update_dict_from_line(info, &'version', line, TYPE_INT)
+		FileUtilities.update_dict_from_line(info, &'size', line, TYPE_VECTOR2I)
+		FileUtilities.update_dict_from_line(info, &'pos', line, TYPE_VECTOR2I)
+		FileUtilities.update_dict_from_line(info, &'dir', line, TYPE_INT)
+		FileUtilities.update_dict_from_line(info, &'fog_color', line, TYPE_COLOR)
+		FileUtilities.update_dict_from_line(info, &'fog_power', line, TYPE_FLOAT)
+		FileUtilities.update_dict_from_line(info, &'eye_height', line, TYPE_FLOAT)
+		FileUtilities.update_dict_from_line(info, &'textures', line, TYPE_STRING)
 
 	if (&'version' not in info or info[&'version'] != MAP_VERSION) or \
 	   (&'size' not in info):
@@ -670,14 +604,11 @@ func loadmap(mapname : String) -> Error:
 	err = terrain.load_map(reader, mapsize)
 	if err != Error.OK:
 		return err
-	else:
-		props.clear_props()
-		set_prop_defs([respropdefs,
-					   userpropdefs,
-					   scan_props_dir('map', "user://%s.zip" % mapname),
-					   scan_props_dir('mapuser', "user://".path_join(PROPS_DIR).path_join(mapname))])
 
-	terrain.apply_staged()
+	err = props.load_props(reader)
+	if err != Error.OK:
+		terrain.discard_staged()
+		return err
 
 	if &'pos' in info:
 		mappos = info[&'pos']
@@ -703,6 +634,19 @@ func loadmap(mapname : String) -> Error:
 		terrain.set_texture(info[&'textures'], reader, mapname)
 
 	reader.close()
+
+	terrain.apply_staged()
+
+	# load propdefs
+	set_prop_defs([respropdefs,
+				   userpropdefs,
+				   scan_props_dir('map', "user://%s.zip" % mapname),
+				   scan_props_dir('mapuser', "user://".path_join(PROPS_DIR).path_join(mapname))])
+
+	# apply this after pos and dir are set so it sets up the initial visible
+	# props correctly, also needs the new heightmap
+	props.heightmap = terrain.images[&'face_heights']
+	props.apply_staged(propdefs)
 
 	return Error.OK
 

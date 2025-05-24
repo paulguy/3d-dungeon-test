@@ -10,6 +10,8 @@ var view_pos : Vector2i = Vector2i.ZERO
 var view_dir : int = 0
 var eye_height : float = 0.0
 
+var staging_props : Dictionary[Vector2i, Array] = {}
+
 @onready var visible_node : Node3D = $'Visible'
 @onready var invisible_node : Node3D = $'Invisible'
 
@@ -262,3 +264,163 @@ func set_bias(prop_pos : Vector2i, idx : int, bias : float):
 func set_alpha(prop_pos : Vector2i, idx : int, alpha : float):
 	if has_prop(prop_pos, idx):
 		props[prop_pos][idx].set_alpha(alpha)
+
+func save_props(writer : ZIPPacker):
+	var err : Error
+
+	err = writer.start_file("props.txt")
+	if err != Error.OK:
+		return err
+
+	for loc in props.keys():
+		err = FileUtilities.write_string(writer, ("location %d %d\n" % [loc.x, loc.y]))
+		if err != Error.OK:
+			return err
+
+		for prop in props[loc]:
+			err = FileUtilities.write_string(writer, ("name %s\n" % [prop.def.name]))
+			if err != Error.OK:
+				return err
+
+			err = FileUtilities.write_string(writer, ("pos %f %f %f\n" % [prop.pos.x,
+																		 prop.pos.y,
+																		 prop.pos.z]))
+			if err != Error.OK:
+				return err
+
+			err = FileUtilities.write_string(writer, ("angle %f\n" % prop.angle))
+			if err != Error.OK:
+				return err
+
+			err = FileUtilities.write_string(writer, ("billboard %s\n" % prop.billboard))
+			if err != Error.OK:
+				return err
+
+			err = FileUtilities.write_string(writer, ("one-sided %s\n" % prop.one_sided))
+			if err != Error.OK:
+				return err
+
+			err = FileUtilities.write_string(writer, ("ceiling-attach %s\n" % prop.ceiling_attach))
+			if err != Error.OK:
+				return err
+
+			err = FileUtilities.write_string(writer, ("horizontal-mode %s\n" % prop.horizontal_mode))
+			if err != Error.OK:
+				return err
+
+			err = FileUtilities.write_string(writer, ("scale %f %f\n" % [prop.scale.x,
+																		prop.scale.y]))
+			if err != Error.OK:
+				return err
+
+			err = FileUtilities.write_string(writer, ("hue %f\n" % prop.hue))
+			if err != Error.OK:
+				return err
+
+			err = FileUtilities.write_string(writer, ("bias %f\n" % prop.bias))
+			if err != Error.OK:
+				return err
+
+			err = FileUtilities.write_string(writer, ("alpha %f\n" % prop.alpha))
+			if err != Error.OK:
+				return err
+
+	err = writer.close_file()
+	if err != Error.OK:
+		return err
+
+	return Error.OK
+
+const PROP_VALUES : Dictionary[StringName, int] = {
+	&'name': TYPE_STRING,
+	&'pos': TYPE_VECTOR3,
+	&'angle': TYPE_FLOAT,
+	&'billboard': TYPE_BOOL,
+	&'one-sided': TYPE_BOOL,
+	&'ceiling-attach': TYPE_BOOL,
+	&'horizontal-mode': TYPE_BOOL,
+	&'scale': TYPE_VECTOR2,
+	&'hue': TYPE_FLOAT,
+	&'bias': TYPE_FLOAT,
+	&'alpha': TYPE_FLOAT
+}
+
+func check_prop_dict(dict : Dictionary) -> bool:
+	for key in PROP_VALUES.keys():
+		if not key in dict:
+			return false
+	return true
+
+func try_create_prop(dictbox : Array[Dictionary], location) -> Error:
+	var dict : Dictionary = dictbox[0]
+
+	if check_prop_dict(dict):
+		if location == null:
+			return Error.ERR_FILE_UNRECOGNIZED
+
+		if not location in staging_props:
+			staging_props[location] = []
+		staging_props[location].append(dict)
+
+		dictbox[0] = {}
+
+	return Error.OK
+
+func load_props(reader : ZIPReader) -> Error:
+	var err : Error
+
+	var dictbox : Array[Dictionary] = [{}]
+	var location : Vector2i
+	var prop_file : String = reader.read_file("props.txt").get_string_from_utf8()
+
+	for line in prop_file.split('\n', false):
+		FileUtilities.update_dict_from_line(dictbox[0], &'location', line, TYPE_VECTOR2I)
+		if &'location' in dictbox[0]:
+			location = dictbox[0][&'location']
+		err = try_create_prop(dictbox, location)
+		if err != Error.OK:
+			return err
+		for key in PROP_VALUES.keys():
+			FileUtilities.update_dict_from_line(dictbox[0], key, line, PROP_VALUES[key])
+			err = try_create_prop(dictbox, location)
+			if err != Error.OK:
+				return err
+
+	if len(dictbox[0]) > 0:
+		return Error.ERR_FILE_UNRECOGNIZED
+
+	return Error.OK
+
+func apply_staged(propdefs : Dictionary[StringName, PropDef]):
+	clear_props()
+
+	for location in staging_props.keys():
+		for s_prop in staging_props[location]:
+			add_prop(propdefs[s_prop[&'name']], location)
+			var prop : Prop = props[location][-1]
+			# these all execute many of the same functions so just set the
+			# values then run all the functions to update everything once
+			prop.pos = s_prop[&'pos']
+			prop.angle = s_prop[&'angle']
+			prop.billboard = s_prop[&'billboard']
+			prop.one_sided = s_prop[&'one-sided']
+			prop.horizontal_mode = s_prop[&'horizontal-mode']
+
+			if s_prop[&'ceiling-attach']:
+				var heights : Color = heightmap.get_pixelv(location)
+				# this calls update_pos
+				prop.toggle_ceiling_attach(heights.g, heights.b)
+			else:
+				prop.update_pos()
+			prop.set_mesh()
+			prop.update_angle()
+
+			# these don't cascade any additional unnecessary updates
+			prop.set_scale(s_prop[&'scale'])
+			prop.set_hue(s_prop[&'hue'])
+			prop.set_bias(s_prop[&'bias'])
+			prop.set_alpha(s_prop[&'alpha'])
+		# update various parameters for props in view
+		update_height(location)
+
+	staging_props = {}
