@@ -615,21 +615,16 @@ func loadmap(mapname : String) -> Error:
 		if mappos.x >= 0 and mappos.x < mapsize.x and \
 		   mappos.y >= 0 and mappos.y < mapsize.y:
 			pos = mappos
-			set_pos()
+			if &'eye_height' in info:
+				eye_height = info[&'eye_height']
 	if &'dir' in info:
 		dir = info[&'dir']
-		set_dir()
 	if &'fog_power' in info:
 		fog_power = info[&'fog_power']
 		set_fog_power()
 	if &'fog_color' in info:
 		fog_color = info[&'fog_color']
 		set_fog_color()
-	if &'eye_height' in info and &'pos' in info:
-		eye_height = info[&'eye_height']
-		set_eye_height()
-	else:
-		info.erase(&'eye_height')
 	if &'textures' in info:
 		terrain.set_texture(info[&'textures'], reader, mapname)
 
@@ -647,6 +642,11 @@ func loadmap(mapname : String) -> Error:
 	# props correctly, also needs the new heightmap
 	props.heightmap = terrain.images[&'face_heights']
 	props.apply_staged(propdefs)
+
+	# these depend on values in terrain and props being up to date
+	set_pos()
+	set_dir()
+	set_eye_height()
 
 	return Error.OK
 

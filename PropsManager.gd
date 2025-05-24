@@ -371,6 +371,10 @@ func load_props(reader : ZIPReader) -> Error:
 
 	var dictbox : Array[Dictionary] = [{}]
 	var location : Vector2i
+	if not reader.file_exists("props.txt"):
+		# nothing to do
+		return Error.OK
+
 	var prop_file : String = reader.read_file("props.txt").get_string_from_utf8()
 
 	for line in prop_file.split('\n', false):
