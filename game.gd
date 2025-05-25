@@ -1157,7 +1157,6 @@ func props_process(_delta : float):
 					selected_prop += 1
 			status()
 
-	# TODO: alternate for copy prop as new default (then find a key to reset)
 	if Input.is_action_just_pressed(&'place prop'):
 		var prop_pos : Vector2i = get_facing_pos()
 		if alternate:

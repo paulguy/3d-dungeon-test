@@ -8,6 +8,7 @@ var map_pos : Vector2i
 var pos : Vector3 = Vector3.ZERO
 var view_pos : Vector3 = Vector3.ZERO
 var angle : float = 0.0
+var billboard_angle : float = 0.0
 var view_angle : float = 0.0
 var billboard : bool = false
 var one_sided : bool = false
@@ -17,7 +18,6 @@ var scale : Vector2 = Vector2.ONE
 var hue : float = 0.0
 var bias : float = 1.0
 var alpha : float = 1.0
-var mesh_arrays : Array = []
 
 const CHANGE_SPEEDS : Array[float] = [0.01, 0.1, 1.0]
 
@@ -130,11 +130,34 @@ static func value_string(parameter : int, val : Variant) -> String:
 	return "%s" % val
 
 func set_mesh_one_sided():
-	var mesh : PlaneMesh = PlaneMesh.new()
-	mesh.size = def.sizemul
-	mesh.center_offset = Vector3(0.0, 0.5, 0.0)
-	mesh.orientation = PlaneMesh.FACE_Z
-	mesh.material = material
+	var sizemul : Vector2 = Vector2(def.sizemul)
+	sizemul.x /= 2.0
+
+	#Инициализируйте ArrayMesh.
+	var mesh_arrays : Array = []
+	mesh_arrays.resize(Mesh.ARRAY_MAX)
+	mesh_arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
+	])
+	mesh_arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([
+		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0),
+		Vector2(0.0, 1.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0),
+	])
+	mesh_arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([
+		Vector3(-sizemul.x, sizemul.y, 0.0),
+		Vector3(sizemul.x, sizemul.y, 0.0),
+		Vector3(-sizemul.x, 0.0, 0.0),
+
+		Vector3(-sizemul.x, 0.0, 0.0),
+		Vector3(sizemul.x, sizemul.y, 0.0),
+		Vector3(sizemul.x, 0.0, 0.0),
+	])
+
+	# Создать сетку.
+	var mesh : ArrayMesh = ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh_arrays)
+	mesh.surface_set_material(0, material)
 
 	sprite.mesh = mesh
 
@@ -143,6 +166,20 @@ func set_mesh_two_sided():
 	sizemul.x /= 2.0
 
 	#Инициализируйте ArrayMesh.
+	var mesh_arrays : Array = []
+	mesh_arrays.resize(Mesh.ARRAY_MAX)
+	mesh_arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
+		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
+		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0)
+	])
+	mesh_arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([
+		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0),
+		Vector2(0.0, 1.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0),
+		Vector2(1.0, 0.0), Vector2(0.0, 0.0), Vector2(1.0, 1.0),
+		Vector2(1.0, 1.0), Vector2(0.0, 0.0), Vector2(0.0, 1.0)
+	])
 	mesh_arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([
 		Vector3(-sizemul.x, sizemul.y, 0.0),
 		Vector3(sizemul.x, sizemul.y, 0.0),
@@ -172,6 +209,20 @@ func set_mesh_horizontal():
 	var sizemul : Vector2 = Vector2(def.sizemul) / 2.0
 
 	#Инициализируйте ArrayMesh.
+	var mesh_arrays : Array = []
+	mesh_arrays.resize(Mesh.ARRAY_MAX)
+	mesh_arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
+		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
+		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
+		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0)
+	])
+	mesh_arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([
+		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0),
+		Vector2(0.0, 1.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0),
+		Vector2(1.0, 0.0), Vector2(0.0, 0.0), Vector2(1.0, 1.0),
+		Vector2(1.0, 1.0), Vector2(0.0, 0.0), Vector2(0.0, 1.0)
+	])
 	mesh_arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([
 		Vector3(sizemul.x, 0.0, sizemul.y),
 		Vector3(-sizemul.x, 0.0, sizemul.y),
@@ -198,7 +249,7 @@ func set_mesh_horizontal():
 	sprite.mesh = mesh
 
 func set_mesh():
-	if billboard or one_sided:
+	if one_sided:
 		set_mesh_one_sided()
 	elif horizontal_mode:
 		set_mesh_horizontal()
@@ -218,20 +269,6 @@ func _init(p_def : PropDef,
 	material.set_shader_parameter(&'bias', bias)
 	material.set_shader_parameter(&'alpha', alpha)
 
-	mesh_arrays.resize(Mesh.ARRAY_MAX)
-	mesh_arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([
-		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
-		Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 0.0, -1.0),
-		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0),
-		Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0), Vector3(0.0, 0.0, 1.0)
-	])
-	mesh_arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([
-		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0),
-		Vector2(0.0, 1.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0),
-		Vector2(1.0, 0.0), Vector2(0.0, 0.0), Vector2(1.0, 1.0),
-		Vector2(1.0, 1.0), Vector2(0.0, 0.0), Vector2(0.0, 1.0)
-	])
-
 	sprite = MeshInstance3D.new()
 	set_mesh()
 
@@ -248,12 +285,20 @@ func set_view_pos(p_view_pos : Vector3):
 
 func update_angle():
 	if billboard:
-		sprite.rotation.y = angle + PI
+		sprite.rotation.y = billboard_angle + PI
 	else:
 		sprite.rotation.y = view_angle + angle
 
+func get_angle() -> float:
+	if billboard:
+		return billboard_angle
+	return angle
+
 func set_angle(val : float):
-	angle = val
+	if billboard:
+		billboard_angle = val
+	else:
+		angle = val
 	update_angle()
 
 func set_view_angle(val : float):
@@ -303,6 +348,7 @@ func get_all() -> Dictionary:
 		&'name': def.name,
 		&'pos': pos,
 		&'angle': angle,
+		&'billboard-angle': billboard_angle,
 		&'billboard': billboard,
 		&'one-sided': one_sided,
 		&'ceiling-attach': ceiling_attach,
@@ -318,6 +364,7 @@ func set_all(s_prop : Dictionary, heights : Color):
 	# values then run all the functions to update everything once
 	pos = s_prop[&'pos']
 	angle = s_prop[&'angle']
+	billboard_angle = s_prop[&'billboard-angle']
 	billboard = s_prop[&'billboard']
 	one_sided = s_prop[&'one-sided']
 	horizontal_mode = s_prop[&'horizontal-mode']

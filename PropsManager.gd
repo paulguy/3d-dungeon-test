@@ -230,7 +230,7 @@ func set_pos_z(prop_pos : Vector2i, idx : int, pos_z : float):
 
 func get_angle(prop_pos : Vector2i, idx : int) -> float:
 	if has_prop(prop_pos, idx):
-		return props[prop_pos][idx].angle
+		return props[prop_pos][idx].get_angle()
 	return 0.0
 
 func set_angle(prop_pos : Vector2i, idx : int, pos : float):
@@ -326,6 +326,7 @@ const PROP_VALUES : Dictionary[StringName, int] = {
 	&'name': TYPE_STRING,
 	&'pos': TYPE_VECTOR3,
 	&'angle': TYPE_FLOAT,
+	&'billboard-angle': TYPE_FLOAT,
 	&'billboard': TYPE_BOOL,
 	&'one-sided': TYPE_BOOL,
 	&'ceiling-attach': TYPE_BOOL,
