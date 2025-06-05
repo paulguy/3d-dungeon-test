@@ -21,11 +21,29 @@ var transform_west : Basis = Basis(Vector3(0.0, 1.0, 0.0), PI * 1.5)
 
 var depth_counts : Array[int] = Array([], TYPE_INT, "", null)
 
+var tex_size : Vector2
+
+var window_size : Vector2 = Vector2(ProjectSettings.get_setting('display/window/size/viewport_width'),
+									ProjectSettings.get_setting('display/window/size/viewport_height'))
+
 func _ready():
 	_mesh = multimesh.mesh
 
+func update_sky_mul():
+	var sky_mul : Vector2 = Vector2(window_size.x / window_size.y,
+									tex_size.x / tex_size.y)
+	RenderingServer.global_shader_parameter_set(&'sky_mul', sky_mul)
+
+func _process(_delta : float):
+	var new_size : Vector2 = Vector2(get_window().size)
+	if window_size != new_size:
+		window_size = new_size
+		update_sky_mul()
+
 func set_texture(texture : Texture2D):
+	tex_size = texture.get_size()
 	_mesh.material.set_shader_parameter(&'albedo_texture', texture)
+	update_sky_mul()
 
 func set_view(depth : int, fov : float):
 	var positions : Array[Vector2i]

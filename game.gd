@@ -46,6 +46,7 @@ const CHANGE_SPEEDS : Array[Array] = [
 	[0.01, 0.1, 1.0],
 	[0.01, 0.1, 1.0],
 	[1.0/64.0, 1.0/8.0, 1.0],
+	[1.0, 1.0, 1.0],
 	[0.01, 0.1, 1.0],
 	[0.01, 0.1, 1.0],
 	[0.01, 0.1, 1.0],
@@ -55,6 +56,41 @@ const CHANGE_SPEEDS : Array[Array] = [
 
 const ROTATION_SPEEDS : Array[float] = [
 	PI / 64.0, PI / 16.0, PI / 2.0
+]
+
+const CURRENT_PARAM_VAL : int = -1
+var CEILING_PARAMETERS : Array[ParamDesc] = [
+	ParamDesc.new(MapParameters.CEILING, MapParameters.WALL, MapParameters.TOP, MapParameters.HUE),
+	ParamDesc.new(MapParameters.CEILING, MapParameters.WALL, MapParameters.TOP, MapParameters.BIAS),
+	ParamDesc.new(MapParameters.CEILING, MapParameters.WALL, MapParameters.TOP, MapParameters.SKY),
+	ParamDesc.new(MapParameters.CEILING, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.HUE),
+	ParamDesc.new(MapParameters.CEILING, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.BIAS),
+	ParamDesc.new(MapParameters.CEILING, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.SKY),
+	ParamDesc.new(MapParameters.CEILING, MapParameters.WALL, MapParameters.TOP, MapParameters.OFFSET)
+]
+
+var FACE_PARAMETERS : Array[ParamDesc] = [
+	ParamDesc.new(CURRENT_PARAM_VAL, MapParameters.HORIZ, CURRENT_PARAM_VAL, MapParameters.HUE),
+	ParamDesc.new(CURRENT_PARAM_VAL, MapParameters.HORIZ, CURRENT_PARAM_VAL, MapParameters.BIAS),
+	ParamDesc.new(CURRENT_PARAM_VAL, MapParameters.HORIZ, CURRENT_PARAM_VAL, MapParameters.SKY),
+	ParamDesc.new(CURRENT_PARAM_VAL, MapParameters.HORIZ, CURRENT_PARAM_VAL, MapParameters.OFFSET)
+]
+
+var FLOOR_PARAMETERS : Array[ParamDesc] = [
+	ParamDesc.new(MapParameters.FLOOR, MapParameters.WALL, MapParameters.TOP, MapParameters.HUE),
+	ParamDesc.new(MapParameters.FLOOR, MapParameters.WALL, MapParameters.TOP, MapParameters.BIAS),
+	ParamDesc.new(MapParameters.FLOOR, MapParameters.WALL, MapParameters.TOP, MapParameters.SKY),
+	ParamDesc.new(MapParameters.FLOOR, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.HUE),
+	ParamDesc.new(MapParameters.FLOOR, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.BIAS),
+	ParamDesc.new(MapParameters.FLOOR, MapParameters.WALL, MapParameters.BOTTOM, MapParameters.SKY),
+	ParamDesc.new(MapParameters.FLOOR, MapParameters.WALL, MapParameters.TOP, MapParameters.OFFSET)
+]
+
+var HEIGHT_PARAMETERS : Array[ParamDesc] = [
+	ParamDesc.new(MapParameters.CEILING, MapParameters.HORIZ, MapParameters.TOP, MapParameters.HEIGHT),
+	ParamDesc.new(MapParameters.CEILING, MapParameters.HORIZ, MapParameters.BOTTOM, MapParameters.HEIGHT),
+	ParamDesc.new(MapParameters.FLOOR, MapParameters.HORIZ, MapParameters.TOP, MapParameters.HEIGHT),
+	ParamDesc.new(MapParameters.FLOOR, MapParameters.HORIZ, MapParameters.BOTTOM, MapParameters.HEIGHT)
 ]
 
 func NO_CB(_s : String):
@@ -67,10 +103,10 @@ var dir : int = 0
 var stored : float = 0.0
 var stored_heights : Array[float] = [2.0, 1.0, 0.0, -1.0]
 # top hue, top bias, bottom hue, bottom bias, offset
-var stored_ceiling : Array[float] = [0.0, 1.0, 0.0, 1.0, 0.0]
-var stored_floor : Array[float] = [0.0, 1.0, 0.0, 1.0, 0.0]
+var stored_ceiling : Array[float] = [0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+var stored_floor : Array[float] = [0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0]
 # hue, bias, offset
-var stored_face : Array[float] = [0.0, 1.0, 0.0]
+var stored_face : Array[float] = [0.0, 1.0, 0.0, 0.0]
 var last_mapname : String = "untitled"
 
 var text_entry_prefix : String = ""
@@ -194,6 +230,8 @@ func change_parameter(amount : float):
 		   (mesh == MapParameters.CEILING and \
 			topbottom == MapParameters.FLOOR):
 			props.update_height(p)
+	elif t_parameter == MapParameters.SKY:
+		terrain.toggle_sky_draw(mesh, face, dir, topbottom, p)
 	elif t_parameter == MapParameters.FOG_COLOR_R:
 		fog_color.r += amount
 		set_fog_color()
@@ -228,6 +266,8 @@ func set_terrain_parameter(val : float, m : int = -1, f : int = -1, t : int = -1
 
 	if r_param <= MapParameters.GEOMETRY_PARAMETERS_MAX:
 		terrain.set_val(r_mesh, r_face, dir, r_tb, r_param, val, fp)
+	elif r_param == MapParameters.SKY:
+		terrain.set_sky_draw(r_mesh, r_face, dir, r_tb, val, fp)
 	elif r_param == MapParameters.FOG_COLOR_R:
 		fog_color.r = val
 		set_fog_color()
@@ -263,6 +303,8 @@ func get_terrain_parameter(m : int = -1, f : int = -1, t : int = -1, p : int = -
 
 	if r_param <= MapParameters.GEOMETRY_PARAMETERS_MAX:
 		return terrain.get_val(r_mesh, r_face, dir, r_tb, r_param, d_pos)
+	elif r_param == MapParameters.SKY:
+		return terrain.get_sky_draw(r_mesh, r_face, dir, r_tb, d_pos)
 	elif r_param == MapParameters.FOG_COLOR_R:
 		return fog_color.r
 	elif r_param == MapParameters.FOG_COLOR_G:
@@ -274,6 +316,27 @@ func get_terrain_parameter(m : int = -1, f : int = -1, t : int = -1, p : int = -
 	elif r_param == MapParameters.DEPTH:
 		return depth
 	return 0.0
+
+func get_terrain_params(paramlist : Array[ParamDesc], d_pos = null) -> Array[float]:
+	if d_pos == null:
+		d_pos = get_facing_pos()
+
+	var vals : Array[float] = []
+	vals.resize(len(paramlist))
+
+	var i : int = 0
+	for param in paramlist:
+		vals[i] = get_terrain_parameter(param.mesh, param.face, param.topbottom, param.parameter, d_pos)
+		i += 1
+
+	return vals
+
+func set_terrain_params(paramlist : Array[ParamDesc],
+						vals : Array[float]):
+	var i : int = 0
+	for param in paramlist:
+		set_terrain_parameter(vals[i], param.mesh, param.face, param.topbottom, param.parameter)
+		i += 1
 
 func get_prop_val(prop_pos : Vector2i) -> Variant:
 	if props.has_prop(prop_pos, selected_prop):
@@ -303,7 +366,7 @@ func get_prop_val(prop_pos : Vector2i) -> Variant:
 			Prop.POS_Z:
 				return props.props[prop_pos][selected_prop].pos.z
 			Prop.ANGLE:
-				return props.props[prop_pos][selected_prop].angle
+				return props.props[prop_pos][selected_prop].get_angle()
 
 	return null
 
@@ -584,7 +647,6 @@ func loadmap(mapname : String) -> Error:
 	var info_file : String = reader.read_file("info.txt").get_string_from_utf8()
 
 	for line in info_file.split('\n', false):
-		print(line)
 		FileUtilities.update_dict_from_line(info, &'version', line, TYPE_INT)
 		FileUtilities.update_dict_from_line(info, &'size', line, TYPE_VECTOR2I)
 		FileUtilities.update_dict_from_line(info, &'pos', line, TYPE_VECTOR2I)
@@ -594,7 +656,6 @@ func loadmap(mapname : String) -> Error:
 		FileUtilities.update_dict_from_line(info, &'eye_height', line, TYPE_FLOAT)
 		FileUtilities.update_dict_from_line(info, &'textures', line, TYPE_STRING)
 
-	print(info)
 	if (&'version' not in info or info[&'version'] != MAP_VERSION) or \
 	   (&'size' not in info):
 		return Error.ERR_FILE_UNRECOGNIZED
@@ -669,46 +730,9 @@ func do_store(num : String):
 		stored = num.to_float()
 
 func phys_move(d_pos : Vector2i):
-	var heights : Array[float] = [get_terrain_parameter(MapParameters.CEILING,
-												MapParameters.HORIZ,
-												MapParameters.TOP,
-												MapParameters.HEIGHT,
-												pos),
-								  get_terrain_parameter(MapParameters.CEILING,
-												MapParameters.HORIZ,
-												MapParameters.BOTTOM,
-												MapParameters.HEIGHT,
-												pos),
-								  get_terrain_parameter(MapParameters.FLOOR,
-												MapParameters.HORIZ,
-												MapParameters.TOP,
-												MapParameters.HEIGHT,
-												pos),
-								  get_terrain_parameter(MapParameters.FLOOR,
-												MapParameters.HORIZ,
-												MapParameters.BOTTOM,
-												MapParameters.HEIGHT,
-												pos)]
-	var d_heights : Array[float] = [get_terrain_parameter(MapParameters.CEILING,
-												  MapParameters.HORIZ,
-												  MapParameters.TOP,
-												  MapParameters.HEIGHT,
-												  d_pos),
-									get_terrain_parameter(MapParameters.CEILING,
-												  MapParameters.HORIZ,
-												  MapParameters.BOTTOM,
-												  MapParameters.HEIGHT,
-												  d_pos),
-									get_terrain_parameter(MapParameters.FLOOR,
-												  MapParameters.HORIZ,
-												  MapParameters.TOP,
-												  MapParameters.HEIGHT,
-												  d_pos),
-									get_terrain_parameter(MapParameters.FLOOR,
-												  MapParameters.HORIZ,
-												  MapParameters.BOTTOM,
-												  MapParameters.HEIGHT,
-												  d_pos)]
+	var heights : Array[float] = get_terrain_params(HEIGHT_PARAMETERS, pos)
+	var d_heights : Array[float] = get_terrain_params(HEIGHT_PARAMETERS, d_pos)
+
 	# get the destination spot floor height, and whether the player can even traverse to it
 	var d_floor = -1
 	if play_height > d_heights[0] - CLIMB_HEIGHT:
@@ -762,10 +786,10 @@ func editor_common_process() -> Array[Variant]:
 		last_mode = mode
 		mode = RunMode.PLAY
 		floor_height = get_terrain_parameter(MapParameters.FLOOR,
-									MapParameters.HORIZ,
-									MapParameters.TOP,
-									MapParameters.HEIGHT,
-									pos)
+											 MapParameters.HORIZ,
+											 MapParameters.TOP,
+											 MapParameters.HEIGHT,
+											 pos)
 		play_height = floor_height
 		status_visibility(false)
 		return [false, false, 0]
@@ -918,194 +942,35 @@ func terrain_process(_delta : float):
 
 	if Input.is_action_just_pressed(&'ceiling'):
 		if alternate:
-			set_terrain_parameter(stored_ceiling[0],
-								  MapParameters.CEILING,
-								  MapParameters.WALL,
-								  MapParameters.TOP,
-								  MapParameters.HUE)
-			set_terrain_parameter(stored_ceiling[1],
-								  MapParameters.CEILING,
-								  MapParameters.WALL,
-								  MapParameters.TOP,
-								  MapParameters.BIAS)
-			set_terrain_parameter(stored_ceiling[2],
-								  MapParameters.CEILING,
-								  MapParameters.WALL,
-								  MapParameters.BOTTOM,
-								  MapParameters.HUE)
-			set_terrain_parameter(stored_ceiling[3],
-								  MapParameters.CEILING,
-								  MapParameters.WALL,
-								  MapParameters.BOTTOM,
-								  MapParameters.BIAS)
-			set_terrain_parameter(stored_ceiling[4],
-								  MapParameters.CEILING,
-								  MapParameters.WALL,
-								  MapParameters.TOP,
-								  MapParameters.OFFSET)
+			set_terrain_params(CEILING_PARAMETERS, stored_ceiling)
 			status("Ceiling wall parameters applied.")
 		else:
-			stored_ceiling = [get_terrain_parameter(
-								  MapParameters.CEILING,
-								  MapParameters.WALL,
-								  MapParameters.TOP,
-								  MapParameters.HUE),
-							  get_terrain_parameter(
-								  MapParameters.CEILING,
-								  MapParameters.WALL,
-								  MapParameters.TOP,
-								  MapParameters.BIAS),
-							  get_terrain_parameter(
-								  MapParameters.CEILING,
-								  MapParameters.WALL,
-								  MapParameters.BOTTOM,
-								  MapParameters.HUE),
-							  get_terrain_parameter(
-								  MapParameters.CEILING,
-								  MapParameters.WALL,
-								  MapParameters.BOTTOM,
-								  MapParameters.BIAS),
-							  get_terrain_parameter(
-								  MapParameters.CEILING,
-								  MapParameters.WALL,
-								  MapParameters.TOP,
-								  MapParameters.OFFSET)]
+			stored_ceiling = get_terrain_params(CEILING_PARAMETERS)
 			status("Ceiling wall parameters stored.")
 
 	if Input.is_action_just_pressed(&'face'):
 		# topbottom only matters for offset but for consistency...
 		if alternate:
-			set_terrain_parameter(stored_face[0],
-								  mesh,
-								  MapParameters.HORIZ,
-								  topbottom,
-								  MapParameters.HUE)
-			set_terrain_parameter(stored_face[1],
-								  mesh,
-								  MapParameters.HORIZ,
-								  topbottom,
-								  MapParameters.BIAS)
-			set_terrain_parameter(stored_face[2],
-								  mesh,
-								  MapParameters.HORIZ,
-								  topbottom,
-								  MapParameters.OFFSET)
+			set_terrain_params(FACE_PARAMETERS, stored_face)
 			status("Face parameters applied.")
 		else:
-			stored_face = [get_terrain_parameter(mesh,
-												 MapParameters.HORIZ,
-												 topbottom,
-												 MapParameters.HUE),
-						   get_terrain_parameter(mesh,
-												 MapParameters.HORIZ,
-												 topbottom,
-												 MapParameters.BIAS),
-						   get_terrain_parameter(mesh,
-												 MapParameters.HORIZ,
-												 topbottom,
-												 MapParameters.OFFSET)]
+			stored_face = get_terrain_params(FACE_PARAMETERS)
 			status("Face parameters stored.")
 
 	if Input.is_action_just_pressed(&"floor"):
 		if alternate:
-			set_terrain_parameter(stored_floor[0],
-								  MapParameters.FLOOR,
-								  MapParameters.WALL,
-								  MapParameters.TOP,
-								  MapParameters.HUE)
-			set_terrain_parameter(stored_floor[1],
-								  MapParameters.FLOOR,
-								  MapParameters.WALL,
-								  MapParameters.TOP,
-								  MapParameters.BIAS)
-			set_terrain_parameter(stored_floor[2],
-								  MapParameters.FLOOR,
-								  MapParameters.WALL,
-								  MapParameters.BOTTOM,
-								  MapParameters.HUE)
-			set_terrain_parameter(stored_floor[3],
-								  MapParameters.FLOOR,
-								  MapParameters.WALL,
-								  MapParameters.BOTTOM,
-								  MapParameters.BIAS)
-			set_terrain_parameter(stored_floor[4],
-								  MapParameters.FLOOR,
-								  MapParameters.WALL,
-								  MapParameters.TOP,
-								  MapParameters.OFFSET)
+			set_terrain_params(FLOOR_PARAMETERS, stored_floor)
 			status("Floor wall parameters applied.")
 		else:
-			stored_floor = [get_terrain_parameter(
-								MapParameters.FLOOR,
-								MapParameters.WALL,
-								MapParameters.TOP,
-								MapParameters.HUE),
-							get_terrain_parameter(
-								MapParameters.FLOOR,
-								MapParameters.WALL,
-								MapParameters.TOP,
-								MapParameters.BIAS),
-							get_terrain_parameter(
-								MapParameters.FLOOR,
-								MapParameters.WALL,
-								MapParameters.BOTTOM,
-								MapParameters.HUE),
-							get_terrain_parameter(
-								MapParameters.FLOOR,
-								MapParameters.WALL,
-								MapParameters.BOTTOM,
-								MapParameters.BIAS),
-							get_terrain_parameter(
-								MapParameters.FLOOR,
-								MapParameters.WALL,
-								MapParameters.TOP,
-								MapParameters.OFFSET)]
+			stored_floor = get_terrain_params(FLOOR_PARAMETERS)
 			status("Floor wall parameters stored.")
 
 	if Input.is_action_just_pressed(&'heights'):
 		if alternate:
-			set_terrain_parameter(stored_heights[0],
-								  MapParameters.CEILING,
-								  MapParameters.HORIZ,
-								  MapParameters.TOP,
-								  MapParameters.HEIGHT)
-			set_terrain_parameter(stored_heights[1],
-								  MapParameters.CEILING,
-								  MapParameters.HORIZ,
-								  MapParameters.BOTTOM,
-								  MapParameters.HEIGHT)
-			set_terrain_parameter(stored_heights[2],
-								  MapParameters.FLOOR,
-								  MapParameters.HORIZ,
-								  MapParameters.TOP,
-								  MapParameters.HEIGHT)
-			set_terrain_parameter(stored_heights[3],
-								  MapParameters.FLOOR,
-								  MapParameters.HORIZ,
-								  MapParameters.BOTTOM,
-								  MapParameters.HEIGHT)
+			set_terrain_params(HEIGHT_PARAMETERS, stored_heights)
 			status("Cell heights applied.")
 		else:
-			stored_heights = [get_terrain_parameter(
-								  MapParameters.CEILING,
-								  MapParameters.HORIZ,
-								  MapParameters.TOP,
-								  MapParameters.HEIGHT),
-							  get_terrain_parameter(
-								  MapParameters.CEILING,
-								  MapParameters.HORIZ,
-								  MapParameters.BOTTOM,
-								  MapParameters.HEIGHT),
-							  get_terrain_parameter(
-								  MapParameters.FLOOR,
-								  MapParameters.HORIZ,
-								  MapParameters.TOP,
-								  MapParameters.HEIGHT),
-							  get_terrain_parameter(
-								  MapParameters.FLOOR,
-								  MapParameters.HORIZ,
-								  MapParameters.BOTTOM,
-								  MapParameters.HEIGHT)]
+			stored_heights = get_terrain_params(HEIGHT_PARAMETERS)
 			status("Cell heights stored.")
 
 	if Input.is_action_just_pressed(&'terrain value entry'):
@@ -1161,10 +1026,11 @@ func props_process(_delta : float):
 		var prop_pos : Vector2i = get_facing_pos()
 		if alternate:
 			stored_prop = props.get_all(prop_pos, selected_prop)
-			selected_pdef = propnames.find(stored_prop[&'name'])
+			if len(stored_prop) != 0:
+				selected_pdef = propnames.find(stored_prop[&'name'])
 		else:
 			selected_prop = props.add_prop(propdefs[propnames[selected_pdef]], prop_pos)
-			if len(stored_prop) > 0:
+			if len(stored_prop) != 0:
 				props.set_all(prop_pos, selected_prop, stored_prop)
 			else:
 				match dir:
@@ -1222,12 +1088,16 @@ func props_process(_delta : float):
 		var prop_cell_pos : Vector3 = props.get_pos(prop_pos, selected_prop)
 		prop_cell_pos.y += pow(10.0, change_speed - 2)
 		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+		if p_parameter == Prop.POS_Y:
+			status()
 
 	if Input.is_action_just_pressed(&'move prop down'):
 		var prop_pos : Vector2i = get_facing_pos()
 		var prop_cell_pos : Vector3 = props.get_pos(prop_pos, selected_prop)
 		prop_cell_pos.y -= pow(10.0, change_speed - 2)
 		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+		if p_parameter == Prop.POS_Y:
+			status()
 
 	if Input.is_action_just_pressed(&'move prop away'):
 		var prop_pos : Vector2i = get_facing_pos()
@@ -1235,6 +1105,8 @@ func props_process(_delta : float):
 		var move_offset : Vector2 = Vector2(get_relative_to_dir(1, 0)) * pow(10.0, change_speed - 2)
 		prop_cell_pos += Vector3(move_offset.x, 0.0, move_offset.y)
 		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+		if p_parameter == Prop.POS_X or p_parameter == Prop.POS_Y:
+			status()
 
 	if Input.is_action_just_pressed(&'move prop towards'):
 		var prop_pos : Vector2i = get_facing_pos()
@@ -1242,6 +1114,8 @@ func props_process(_delta : float):
 		var move_offset : Vector2 = Vector2(get_relative_to_dir(-1, 0)) * pow(10.0, change_speed - 2)
 		prop_cell_pos += Vector3(move_offset.x, 0.0, move_offset.y)
 		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+		if p_parameter == Prop.POS_X or p_parameter == Prop.POS_Y:
+			status()
 
 	if Input.is_action_just_pressed(&'move prop left'):
 		var prop_pos : Vector2i = get_facing_pos()
@@ -1249,6 +1123,8 @@ func props_process(_delta : float):
 		var move_offset : Vector2 = Vector2(get_relative_to_dir(0, -1)) * pow(10.0, change_speed - 2)
 		prop_cell_pos += Vector3(move_offset.x, 0.0, move_offset.y)
 		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+		if p_parameter == Prop.POS_X or p_parameter == Prop.POS_Y:
+			status()
 
 	if Input.is_action_just_pressed(&'move prop right'):
 		var prop_pos : Vector2i = get_facing_pos()
@@ -1256,6 +1132,8 @@ func props_process(_delta : float):
 		var move_offset : Vector2 = Vector2(get_relative_to_dir(0, 1)) * pow(10.0, change_speed - 2)
 		prop_cell_pos += Vector3(move_offset.x, 0.0, move_offset.y)
 		props.set_pos(prop_pos, selected_prop, prop_cell_pos)
+		if p_parameter == Prop.POS_X or p_parameter == Prop.POS_Y:
+			status()
 
 	if Input.is_action_just_pressed(&'rotate prop counter clockwise'):
 		var prop_pos : Vector2i = get_facing_pos()
@@ -1264,6 +1142,8 @@ func props_process(_delta : float):
 		if prop_angle >= TAU:
 			prop_angle -= TAU
 		props.set_angle(prop_pos, selected_prop, prop_angle)
+		if p_parameter == Prop.ANGLE:
+			status()
 
 	if Input.is_action_just_pressed(&'rotate prop clockwise'):
 		var prop_pos : Vector2i = get_facing_pos()
@@ -1272,6 +1152,8 @@ func props_process(_delta : float):
 		if prop_angle < 0.0:
 			prop_angle += TAU
 		props.set_angle(prop_pos, selected_prop, prop_angle)
+		if p_parameter == Prop.ANGLE:
+			status()
 
 func events_process(_delta : float):
 	var modifiers : Array[Variant] = editor_common_process()

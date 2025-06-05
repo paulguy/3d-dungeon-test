@@ -14,5 +14,5 @@ vec3 hue2rgb(float c_hue, float c_bias) {
 	// bias below 1.0 should darken, bias above 1.0 should "desaturate"
 	return vec3(1.0 - (((clamp(c_hue, 0.33, 0.49) - 0.33) - (max(c_hue, 0.84) - 0.84)) / 0.16),
 				1.0 - ((min(c_hue, 0.16) - (clamp(c_hue, 0.16, 0.32) - 0.16)) / 0.16) - ((clamp(c_hue, 0.67, 0.83) - 0.67) / 0.16),
-				1.0 - ((min(c_hue, 0.16) - (clamp(c_hue, 0.49, 0.67) - 0.49)) / 0.16)) * max(c_bias, 1.0) + min(c_bias - 1.0, 0.0);
+				1.0 - ((min(c_hue, 0.16) - (clamp(c_hue, 0.49, 0.67) - 0.49)) / 0.16)) * max(c_bias, 1.0);
 }

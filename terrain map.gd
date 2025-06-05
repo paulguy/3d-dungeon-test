@@ -20,21 +20,24 @@ const MAP_LAYERS : Array[StringName] = [
 
 @onready var terrain : MultiMeshInstance3D = $'Terrain Multimesh'
 
+const MINIMUM_HUE : float = 0.0001
+const PARAM_MIN : Array[float] = [-1.79769e308, MINIMUM_HUE, 0.0, 0.0]
+
 var dims : Vector2i = Vector2i.ZERO
 var images : Dictionary[StringName, Image]
 var staging_images : Dictionary[StringName, Image]
 var clear_color : Dictionary[StringName, Color] = {
 	&'face_heights': Color(2.0, 1.0, 0.0, -1.0),
 	&'face_offsets': Color(0.0, 0.0, 0.0, 0.0),
-	&'face_hues_and_biases': Color(0.0, 1.0, 0.0, 1.0),
+	&'face_hues_and_biases': Color(MINIMUM_HUE, 1.0, MINIMUM_HUE, 1.0),
 	&'floor_side_texture_offsets': Color(1.0, 1.0, 1.0, 1.0),
-	&'floor_north_south_hues': Color(0.0, 0.0, 0.0, 0.0),
+	&'floor_north_south_hues': Color(MINIMUM_HUE, MINIMUM_HUE, MINIMUM_HUE, MINIMUM_HUE),
 	&'floor_north_south_biases': Color(1.0, 1.0, 1.0, 1.0),
-	&'floor_east_west_hues': Color(0.0, 0.0, 0.0, 0.0),
+	&'floor_east_west_hues': Color(MINIMUM_HUE, MINIMUM_HUE, MINIMUM_HUE, MINIMUM_HUE),
 	&'floor_east_west_biases': Color(1.0, 1.0, 1.0, 1.0),
-	&'ceiling_north_south_hues': Color(0.0, 0.0, 0.0, 0.0),
+	&'ceiling_north_south_hues': Color(MINIMUM_HUE, MINIMUM_HUE, MINIMUM_HUE, MINIMUM_HUE),
 	&'ceiling_north_south_biases': Color(1.0, 1.0, 1.0, 1.0),
-	&'ceiling_east_west_hues': Color(0.0, 0.0, 0.0, 0.0),
+	&'ceiling_east_west_hues': Color(MINIMUM_HUE, MINIMUM_HUE, MINIMUM_HUE, MINIMUM_HUE),
 	&'ceiling_east_west_biases': Color(1.0, 1.0, 1.0, 1.0),
 	&'ceiling_side_texture_offsets': Color(3.0, 3.0, 3.0, 3.0)
 }
@@ -319,34 +322,56 @@ func lookup_offset(mesh : int, face : int, dir : int, topbottom : int, parameter
 	return -1
 
 func change(mesh : int, face : int, dir : int, topbottom : int, parameter : int,
-			val : float, pos : Vector2i, size : Vector2i = Vector2i.ZERO):
+			val : float, pos : Vector2i):
 	var imagename : StringName = lookup_name(mesh, face, dir, parameter)
 	var image : Image = images[imagename]
 	var col : Color = image.get_pixelv(pos)
-	col[lookup_offset(mesh, face, dir, topbottom, parameter)] += val
-	if size == Vector2i.ZERO:
-		image.set_pixelv(pos, col)
-	else:
-		image.fill_rect(Rect2i(pos, size), col)
+	var offset : int = lookup_offset(mesh, face, dir, topbottom, parameter)
+	col[offset] = max(col[offset] + val, PARAM_MIN[parameter])
+	image.set_pixelv(pos, col)
 	terrain.set_image(imagename, image)
 
 func set_val(mesh : int, face : int, dir : int, topbottom : int, parameter : int,
-			 val : float, pos : Vector2i, size : Vector2i = Vector2i.ZERO):
+			 val : float, pos : Vector2i):
 	var imagename : StringName = lookup_name(mesh, face, dir, parameter)
 	var image : Image = images[imagename]
 	var col : Color = image.get_pixelv(pos)
-	col[lookup_offset(mesh, face, dir, topbottom, parameter)] = val
-	if size == Vector2i.ZERO:
-		image.set_pixelv(pos, col)
-	else:
-		image.fill_rect(Rect2i(pos, size), col)
+	col[lookup_offset(mesh, face, dir, topbottom, parameter)] = max(val, PARAM_MIN[parameter])
+	image.set_pixelv(pos, col)
 	terrain.set_image(imagename, image)
 
 func get_val(mesh : int, face : int, dir : int, topbottom : int, parameter : int,
 			pos : Vector2i) -> float:
 	var imagename : StringName = lookup_name(mesh, face, dir, parameter)
 	var image : Image = images[imagename]
-	return image.get_pixelv(pos)[lookup_offset(mesh, face, dir, topbottom, parameter)]
+	var val : float = image.get_pixelv(pos)[lookup_offset(mesh, face, dir, topbottom, parameter)]
+	if val < 0.0 and parameter == MapParameters.HUE:
+		val *= -1.0
+	return val
+
+func toggle_sky_draw(mesh : int, face : int, dir : int, topbottom : int,
+					 pos : Vector2i):
+	var imagename : StringName = lookup_name(mesh, face, dir, MapParameters.HUE)
+	var image : Image = images[imagename]
+	var col : Color = image.get_pixelv(pos)
+	col[lookup_offset(mesh, face, dir, topbottom, MapParameters.HUE)] *= -1.0
+	image.set_pixelv(pos, col)
+	terrain.set_image(imagename, image)
+
+func set_sky_draw(mesh : int, face : int, dir : int, topbottom : int,
+				  val : bool, pos : Vector2i):
+	var imagename : StringName = lookup_name(mesh, face, dir, MapParameters.HUE)
+	var image : Image = images[imagename]
+	var col : Color = image.get_pixelv(pos)
+	var offset : int = lookup_offset(mesh, face, dir, topbottom, MapParameters.HUE)
+	col[offset] = abs(col[offset]) * (-1.0 if val else 1.0)
+	image.set_pixelv(pos, col)
+	terrain.set_image(imagename, image)
+
+func get_sky_draw(mesh : int, face : int, dir : int, topbottom : int, pos : Vector2i):
+	var imagename : StringName = lookup_name(mesh, face, dir, MapParameters.HUE)
+	var image : Image = images[imagename]
+	return image.get_pixelv(pos)[lookup_offset(mesh, face, dir, topbottom, MapParameters.HUE)] < 0.0
 
 func write_image(writer : ZIPPacker, layername : StringName) -> Error:
 	var err : Error = writer.start_file("%s.bin" % layername)

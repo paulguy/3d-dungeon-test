@@ -272,3 +272,7 @@ fog_color={
 "type": "vec3",
 "value": Vector3(0, 0, 0)
 }
+sky_mul={
+"type": "vec2",
+"value": Vector2(0, 0)
+}

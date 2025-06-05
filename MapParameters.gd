@@ -5,12 +5,13 @@ enum {
 	HUE = 1,
 	BIAS = 2,
 	OFFSET = 3,
-	FOG_COLOR_R = 4,
-	FOG_COLOR_G = 5,
-	FOG_COLOR_B = 6,
-	FOG_POWER = 7,
-	DEPTH = 8,
-	MAX_PARAMETER = 9
+	SKY = 4,
+	FOG_COLOR_R = 5,
+	FOG_COLOR_G = 6,
+	FOG_COLOR_B = 7,
+	FOG_POWER = 8,
+	DEPTH = 9,
+	MAX_PARAMETER = 10
 }
 const GEOMETRY_PARAMETERS_MAX = OFFSET
 
@@ -24,6 +25,8 @@ static func parameter_string(val : int) -> String:
 			return "bias"
 		OFFSET:
 			return "offset"
+		SKY:
+			return "draw sky"
 		FOG_COLOR_R:
 			return "fog color r"
 		FOG_COLOR_G:
