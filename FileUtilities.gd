@@ -39,7 +39,7 @@ static func update_dict_from_line(dict : Dictionary, #[StringName, Variant],
 								  key : StringName,
 								  line : String,
 								  type : int):
-	var parts : PackedStringArray = line.split(' ', true, 1)
+	var parts : PackedStringArray = line.split(' ', false, 1)
 	parts[0] = parts[0].strip_edges()
 	parts[1] = parts[1].strip_edges()
 	var vals : PackedStringArray
@@ -54,6 +54,8 @@ static func update_dict_from_line(dict : Dictionary, #[StringName, Variant],
 	if len(parts) == 1:
 		if type == TYPE_BOOL:
 			dict[key] = true
+		elif type == TYPE_STRING:
+			dict[key] = ""
 		return
 
 	match type:

@@ -1,7 +1,5 @@
 extends Node3D
 
-const DEFAULT_TEXTURES : String = "res://textures.png"
-
 const MAP_LAYERS : Array[StringName] = [
 	&'face_heights',
 	&'face_offsets',
@@ -23,9 +21,15 @@ const MAP_LAYERS : Array[StringName] = [
 const MINIMUM_HUE : float = 0.0001
 const PARAM_MIN : Array[float] = [-1.79769e308, MINIMUM_HUE, 0.0, 0.0]
 
+const DEFAULT_TEX_PATH : String = "textures"
+const DEFAULT_TEX_FILE : String = "textures.txt"
+
 var dims : Vector2i = Vector2i.ZERO
 var images : Dictionary[StringName, Image]
 var staging_images : Dictionary[StringName, Image]
+var staging_texture
+var texdefs : TexDefs
+var staging_texdefs
 var clear_color : Dictionary[StringName, Color] = {
 	&'face_heights': Color(2.0, 1.0, 0.0, -1.0),
 	&'face_offsets': Color(0.0, 0.0, 0.0, 0.0),
@@ -134,35 +138,99 @@ func rescale_colors(width : int, height : int,
 			c_ew_bias.b = c_ew_bias.a + ((c_ew_bias.b - c_ew_bias.a) * ((heights.r - heights.g) / (heights.g - w_height.g)))
 			_ceiling_east_west_biases.set_pixel(x, y, c_ew_bias)
 
-func init_empty_world(dimensions : Vector2i):
+func read_tex_defs(texdefstr : String, reader = null) -> TexDefs:
+	var new_texdefs : TexDefs = TexDefs.new()
+
+	var info : Dictionary[StringName, Variant] = {}
+
+	for line in texdefstr.split('\n', false):
+		FileUtilities.update_dict_from_line(info, &'width', line, TYPE_INT)
+		FileUtilities.update_dict_from_line(info, &'texture', line, TYPE_STRING)
+		# TODO: Animations?
+
+		if new_texdefs.width <= 0 and &'width' in info:
+			new_texdefs.width = info[&'width']
+
+		if &'texture' in info:
+			if new_texdefs.width <= 0:
+				return TexDefs.new()
+
+			var texpath : String = DEFAULT_TEX_PATH.path_join(info[&'texture'])
+			var restexpath : String = "res://%s" % texpath
+
+			if reader != null and reader.file_exists(texpath):
+				# texture from ZIP
+				new_texdefs.append(TexDef.new(texpath))
+			elif FileAccess.file_exists(restexpath):
+				# texture from built in resources
+				new_texdefs.append(TexDef.new(restexpath))
+				# TODO: Textures from user dir
+			else:
+				# texture not found
+				return TexDefs.new()
+
+			info.erase(&'texture')
+
+	return new_texdefs
+
+func set_textures(reader = null, mapname = null) -> bool:
+	var texdefstr : String
+
+	var texdefpath : String = DEFAULT_TEX_PATH.path_join(DEFAULT_TEX_FILE)
+
+	if reader == null or not reader.file_exists(texdefpath):
+		# don't check for errors, if the defualt is missing, something is broken
+		var infile : FileAccess = FileAccess.open("res://%s" % texdefpath, FileAccess.READ)
+		texdefstr = infile.get_as_text()
+		infile.close()
+	else:
+		texdefstr = reader.read_file(texdefpath).get_string_from_utf8()
+
+	staging_texdefs = read_tex_defs(texdefstr)
+	if staging_texdefs.width <= 0 or len(staging_texdefs.texdefs) == 0:
+		return false
+
+	var teximages : Array[Image] = []
+	var totalheight : int = 0
+
+	for texdef in staging_texdefs.texdefs:
+		var image : Image = Image.new()
+
+		var texfilename : String = texdef.texnames[0]
+
+		if texfilename.begins_with("res://") or texfilename.begins_with("user://"):
+			image.load_png_from_buffer(FileAccess.get_file_as_bytes(texdef.texnames[0]))
+		else:
+			image.load_png_from_buffer(reader.read_file(texdef.texnames[0]))
+
+		if image.get_width() != staging_texdefs.width:
+			return false
+
+		teximages.append(image)
+		totalheight += image.get_height()
+
+	staging_texture = Image.create_empty(staging_texdefs.width, totalheight, true, Image.FORMAT_RGBA8)
+
+	var cur_y : int = 0
+	for image in teximages:
+		image.generate_mipmaps()
+		staging_texture.blit_rect(image,
+								  Rect2i(Vector2i.ZERO, image.get_size()),
+								  Vector2i(0, cur_y))
+		cur_y += image.get_height()
+
+	return true
+
+func init_default_world(dimensions : Vector2i):
+	set_textures()
+	texdefs = staging_texdefs
+	staging_texdefs = null
+	terrain.set_texture(ImageTexture.create_from_image(staging_texture))
+	staging_texture = null
+
 	dims = dimensions
 	for layer in MAP_LAYERS:
 		init_clear_texture(layer)
-
-func set_texture(texturename, reader = null, mapname = null):
-	var filename : String = "%s.png" % texturename
-	var image : Image = Image.new()
-	var err : Error
-
-	if reader != null:
-		if reader.file_exists(filename):
-			err = image.load_png_from_buffer(reader.read_file(filename))
-			if err != Error.OK:
-				# just continue...
-				print_debug("File %s exists in %s.zip but failed to load!" % [filename, mapname])
-				image = Image.new()
-
-		if image.get_data_size() == 0:
-			var modname : String = "user://mods".path_join(mapname).path_join(filename)
-			if FileAccess.file_exists(modname):
-				err = image.load(modname)
-				if err != Error.OK:
-					image = Image.new()
-
-	if image.get_data_size() == 0:
-		terrain.set_texture(load("res://".path_join(filename)))
-	else:
-		terrain.set_texture(ImageTexture.create_from_image(image))
 
 func set_view(depth, fov):
 	return terrain.set_view(depth, fov)
@@ -373,6 +441,26 @@ func get_sky_draw(mesh : int, face : int, dir : int, topbottom : int, pos : Vect
 	var image : Image = images[imagename]
 	return image.get_pixelv(pos)[lookup_offset(mesh, face, dir, topbottom, MapParameters.HUE)] < 0.0
 
+func write_tex_defs(writer : ZIPPacker) -> Error:
+	var err : Error = writer.start_file(DEFAULT_TEX_PATH.path_join(DEFAULT_TEX_FILE))
+	if err != Error.OK:
+		return err
+
+	err = FileUtilities.write_line(writer, ("width %d" % texdefs.width))
+	if err != Error.OK:
+		return err
+
+	for texdef in texdefs.texdefs:
+		err = FileUtilities.write_line(writer, ("texture %s" % texdef.texnames[0].get_file()))
+		if err != Error.OK:
+			return err
+
+	err = writer.close_file()
+	if err != Error.OK:
+		return err
+
+	return Error.OK
+
 func write_image(writer : ZIPPacker, layername : StringName) -> Error:
 	var err : Error = writer.start_file("%s.bin" % layername)
 	if err != Error.OK:
@@ -390,6 +478,10 @@ func write_image(writer : ZIPPacker, layername : StringName) -> Error:
 
 func save_map(writer : ZIPPacker) -> Error:
 	var err : Error
+
+	err = write_tex_defs(writer)
+	if err != Error.OK:
+		return err
 
 	for layer in MAP_LAYERS:
 		err = write_image(writer, layer)
@@ -422,9 +514,17 @@ func load_map(reader : ZIPReader, mapsize : Vector2i) -> Error:
 	return Error.OK
 
 func apply_staged():
+	texdefs = staging_texdefs
+	staging_texdefs = null
+	terrain.set_texture(ImageTexture.create_from_image(staging_texture))
+	staging_texture = null
+
 	images = staging_images
 	for layer in MAP_LAYERS:
 		terrain.set_image(layer, images[layer])
+	staging_images = {}
 
 func discard_staged():
+	staging_texdefs = null
+	staging_texture = null
 	staging_images = {}

@@ -86,14 +86,14 @@ static func parameter_string(val : int) -> String:
 
 	return "invalid"
 
-static func attachment_string(ceiling_attach : bool) -> String:
-	if ceiling_attach:
+static func attachment_string(val : bool) -> String:
+	if val:
 		return "ceiling"
 
 	return "floor"
 
-static func horizontal_mode_string(horizontal_mode : bool) -> String:
-	if horizontal_mode:
+static func horizontal_mode_string(val : bool) -> String:
+	if val:
 		return "flat"
 
 	return "standing"

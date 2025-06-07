@@ -1,0 +1,14 @@
+width 64
+texture ugly-tiles.png
+texture carpet.png
+texture wall-top.png
+texture wall-bottom.png
+texture drop-ceiling-light.png
+texture drop-ceiling.png
+texture cobblestone.png
+texture reinforced-cobblestone.png
+texture dirt.png
+texture stone.png
+texture stone2.png
+texture grass.png
+texture sky.png

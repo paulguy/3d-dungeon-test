@@ -169,7 +169,7 @@ void vertex() {
 		}
 	}
 
-	if(UV2.r >= 0.0) {
+	if(UV2.x >= 0.0) {
 		/* Only apply fog to non-sky surfaces. */
 		float fog_ratio = pow(-world_pos.y / (depth + 1.0), fog_power);
 
@@ -318,7 +318,7 @@ void fragment() {
 	color.r = pow(color.r, COLOR.a + 1.0);
 	color.g = pow(color.g, COLOR.a + 1.0);
 	color.b = pow(color.b, COLOR.a + 1.0);
-	ALBEDO = (color - (UV2.r / 2.0)) * COLOR.rgb;
+	ALBEDO = (color - (COLOR.a / 2.0)) * COLOR.rgb;
 	//ALBEDO = vec3(UV, 1.0) * COLOR.rgb;
 }
 

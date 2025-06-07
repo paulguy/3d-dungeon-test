@@ -39,7 +39,6 @@ var world_height : int = 128
 var fog_power : float = 0.5
 var fog_color : Color = Color(0.0, 0.0, 0.0)
 var depth : int
-var textures : String = "textures"
 
 const CHANGE_SPEEDS : Array[Array] = [
 	[0.01, 0.1, 1.0],
@@ -585,10 +584,6 @@ func save_global_params(writer : ZIPPacker) -> Error:
 	if err != Error.OK:
 		return err
 
-	err = FileUtilities.write_line(writer, ("textures %s" % textures))
-	if err != Error.OK:
-		return err
-
 	err = writer.close_file()
 	if err != Error.OK:
 		return err
@@ -654,7 +649,6 @@ func loadmap(mapname : String) -> Error:
 		FileUtilities.update_dict_from_line(info, &'fog_color', line, TYPE_COLOR)
 		FileUtilities.update_dict_from_line(info, &'fog_power', line, TYPE_FLOAT)
 		FileUtilities.update_dict_from_line(info, &'eye_height', line, TYPE_FLOAT)
-		FileUtilities.update_dict_from_line(info, &'textures', line, TYPE_STRING)
 
 	if (&'version' not in info or info[&'version'] != MAP_VERSION) or \
 	   (&'size' not in info):
@@ -662,6 +656,10 @@ func loadmap(mapname : String) -> Error:
 
 	mapsize = info[&'size']
 	if mapsize.x < 1 or mapsize.y < 1:
+		return Error.ERR_FILE_UNRECOGNIZED
+
+	if not terrain.set_textures(reader, mapname):
+		terrain.discard_staged()
 		return Error.ERR_FILE_UNRECOGNIZED
 
 	err = terrain.load_map(reader, mapsize)
@@ -694,8 +692,6 @@ func loadmap(mapname : String) -> Error:
 	if &'fog_color' in info:
 		fog_color = info[&'fog_color']
 		set_fog_color()
-	if &'textures' in info:
-		terrain.set_texture(info[&'textures'], reader, mapname)
 
 	reader.close()
 
@@ -1219,10 +1215,9 @@ func _ready():
 	scan_props()
 	set_prop_defs([respropdefs, userpropdefs])
 
-	terrain.set_texture(textures)
 	var view_positions : Array[Vector2i] = terrain.set_view(MAX_DEPTH, $'Camera3D'.fov)
 	depth = MAX_DEPTH
-	terrain.init_empty_world(Vector2i(world_width, world_height))
+	terrain.init_default_world(Vector2i(world_width, world_height))
 	terrain.set_eye_height(eye_height)
 	set_fog_color()
 	set_fog_power()
