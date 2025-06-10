@@ -3,7 +3,7 @@ extends Node3D
 # TODO: that ugly stripe along left of center (worked around with 2x MSAA, not "fixed")
 #       box select/operations
 
-const MAP_VERSION : int = 1
+const MAP_VERSION : int = 2
 
 const DEFAULT_EYE_HEIGHT : float = 0.5
 const PLAYER_HEIGHT : float = 0.8
@@ -650,7 +650,7 @@ func loadmap(mapname : String) -> Error:
 		FileUtilities.update_dict_from_line(info, &'fog_power', line, TYPE_FLOAT)
 		FileUtilities.update_dict_from_line(info, &'eye_height', line, TYPE_FLOAT)
 
-	if (&'version' not in info or info[&'version'] != MAP_VERSION) or \
+	if (&'version' not in info or info[&'version'] > MAP_VERSION) or \
 	   (&'size' not in info):
 		return Error.ERR_FILE_UNRECOGNIZED
 
@@ -662,7 +662,7 @@ func loadmap(mapname : String) -> Error:
 		terrain.discard_staged()
 		return Error.ERR_FILE_UNRECOGNIZED
 
-	err = terrain.load_map(reader, mapsize)
+	err = terrain.load_map(reader, mapsize, info[&'version'])
 	if err != Error.OK:
 		return err
 
@@ -731,12 +731,12 @@ func phys_move(d_pos : Vector2i):
 
 	# get the destination spot floor height, and whether the player can even traverse to it
 	var d_floor = -1
-	if play_height > d_heights[0] - CLIMB_HEIGHT:
+	if play_height >= d_heights[0] - CLIMB_HEIGHT:
 		d_floor = 0
-	elif play_height > d_heights[2] - CLIMB_HEIGHT and \
-		 d_heights[1] - d_heights[2] > FIT_HEIGHT and \
-		 heights[1] - d_heights[2] > FIT_HEIGHT and \
-		 play_height - d_heights[1] > FIT_HEIGHT:
+	elif play_height >= d_heights[2] - CLIMB_HEIGHT and \
+		 d_heights[1] - d_heights[2] >= FIT_HEIGHT and \
+		 heights[1] - d_heights[2] >= FIT_HEIGHT and \
+		 d_heights[1] - play_height >= FIT_HEIGHT:
 		 # can climb up
 		 # can fit in the destination space
 		 # can fit through the space between the current ceiling and destination floor

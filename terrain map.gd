@@ -490,24 +490,41 @@ func save_map(writer : ZIPPacker) -> Error:
 
 	return Error.OK
 
-func load_layer(reader : ZIPReader, layername : String,
-				pixelsize : int, size : Vector2i) -> Error:
+func load_layer(reader : ZIPReader, layername : StringName,
+				pixelsize : int, size : Vector2i,
+				version : int) -> Error:
 	var data : PackedByteArray = reader.read_file("%s.bin" % layername)
 
 	if len(data) / pixelsize != size.x * size.y:
 		return Error.ERR_FILE_CORRUPT
 
+	if version < 2:
+		# add flag to hue parameter
+		if layername == &'face_hues_and_biases':
+			var fdata : PackedFloat32Array = data.to_float32_array()
+			for i in len(fdata) / 2:
+				fdata[i * 2] = max(fdata[i * 2], MINIMUM_HUE)
+			data = fdata.to_byte_array()
+		elif layername == &'floor_north_south_hues' or \
+			 layername == &'floor_east_west_hues' or \
+			 layername == &'ceiling_north_south_hues' or \
+			 layername == &'ceiling_east_west_hues':
+			var fdata : PackedFloat32Array = data.to_float32_array()
+			for i in len(fdata):
+				fdata[i] = max(fdata[i], MINIMUM_HUE)
+			data = fdata.to_byte_array()
+
 	staging_images[layername] = Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGBAF, data)
 
 	return Error.OK
 
-func load_map(reader : ZIPReader, mapsize : Vector2i) -> Error:
+func load_map(reader : ZIPReader, mapsize : Vector2i, version : int) -> Error:
 	var err : Error
 	var pixelsize : int = Image.create_empty(1, 1, false, Image.FORMAT_RGBAF).get_data_size()
 
 	staging_images = {}
 	for layer in MAP_LAYERS:
-		err = load_layer(reader, layer, pixelsize, mapsize)
+		err = load_layer(reader, layer, pixelsize, mapsize, version)
 		if err != Error.OK:
 			return err
 
